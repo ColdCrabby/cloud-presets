@@ -1,5 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { StytchUIClient, StytchUI, Products } from '@stytch/vanilla-js';
+import { StytchUIClient, StytchUI, Products, OTPMethods } from '@stytch/vanilla-js';
 import { setCloudPresetsAuthTokenProvider } from '@cloud-presets/api-client';
 import { environment } from '../../environments/environment';
 
@@ -59,16 +59,15 @@ export class SessionStore {
       render: (opts: unknown) => void;
     };
     host.replaceChildren(el);
-    // Consumer login uses the Login/Sign-up redirect URLs registered in the
-    // Stytch dashboard — no Discovery type needed.
-    const redirectURL = `${globalThis.location.origin}/vendor/`;
+    // Email one-time passcode: the user enters a code on this page, so there is
+    // no redirect and no redirect-URL configuration to get wrong.
     el.render({
       client: this.stytch,
       config: {
-        products: [Products.emailMagicLinks],
-        emailMagicLinksOptions: {
-          loginRedirectURL: redirectURL,
-          signupRedirectURL: redirectURL,
+        products: [Products.otp],
+        otpOptions: {
+          methods: [OTPMethods.Email],
+          expirationMinutes: 10,
         },
         sessionOptions: { sessionDurationMinutes: 60 },
       },
