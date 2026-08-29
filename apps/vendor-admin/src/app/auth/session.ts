@@ -22,6 +22,7 @@ export class SessionStore {
   private readonly _member = signal<Member | null>(null);
   private sessionJwt: string | null = null;
   private stytch: StytchUIClient | null = null;
+  private mounted = false;
 
   readonly member = this._member.asReadonly();
   readonly isAuthenticated = computed(() => this._member() !== null);
@@ -39,9 +40,10 @@ export class SessionStore {
 
   /** Mount the Stytch login UI into host. No-op in stub mode. */
   mountLogin(host: HTMLElement): void {
-    if (!this.stytch) {
+    if (!this.stytch || this.mounted) {
       return;
     }
+    this.mounted = true;
     if (!customElements.get('stytch-login')) {
       customElements.define('stytch-login', StytchUI);
     }
