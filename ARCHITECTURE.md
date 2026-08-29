@@ -291,7 +291,10 @@ Rotation is designed for rather than deferred: verification accepts the previous
 secret during an overlap window so a rotation does not require a synchronized
 restart. The GitHub App is granted the narrowest useful permissions — enough to
 push branches and open pull requests, and deliberately **not** enough to bypass
-branch protection on `main`. The bot proposes; humans merge.
+branch protection on `main`. The bot proposes; humans merge. Its private key
+lives in the platform's secret store and reaches the process as an environment
+variable; the checked permission set and the key rotation procedure are in
+[docs/github-app-setup.md](./docs/github-app-setup.md).
 
 ---
 

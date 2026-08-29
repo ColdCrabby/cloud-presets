@@ -86,6 +86,7 @@ Then, by topic:
 | [docs/presets-repo-layout.md](./docs/presets-repo-layout.md) | How `ColdCrabby/presets` is organised, and how vendor ownership is expressed as files instead of database rows. |
 | [docs/api-surface.md](./docs/api-surface.md) | Endpoints, caching by catalog revision, the error model, and OpenAPI client generation. |
 | [docs/vendor-workflow.md](./docs/vendor-workflow.md) | Vendor sign-in, authorization, and how an edit becomes a merged pull request. |
+| [docs/github-app-setup.md](./docs/github-app-setup.md) | The bot GitHub App: expected settings and permissions, how its credentials reach the API, and the private key rotation procedure. |
 
 ---
 
