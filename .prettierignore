@@ -1,0 +1,12 @@
+# Build output and dependencies.
+dist/
+node_modules/
+.angular/
+
+# Architecture docs predate the frontend workspace and follow their own style.
+ARCHITECTURE.md
+README.md
+docs/api-surface.md
+docs/preset-schema.md
+docs/presets-repo-layout.md
+docs/vendor-workflow.md

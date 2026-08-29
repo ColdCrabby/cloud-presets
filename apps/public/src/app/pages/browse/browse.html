@@ -1,0 +1,45 @@
+<section class="browse">
+  <form class="browse__search" (submit)="$event.preventDefault(); submit()">
+    <input
+      class="browse__input"
+      type="search"
+      placeholder="Search presets — try “mk4”, “petg”, “bambu”"
+      [value]="query()"
+      (input)="onInput($event)"
+      aria-label="Search presets"
+    />
+    <cp-button type="submit">Search</cp-button>
+  </form>
+
+  @if (catalog.loading()) {
+    <p class="browse__status">Searching…</p>
+  } @else if (catalog.error(); as error) {
+    <p class="browse__status browse__status--error">{{ error }}</p>
+  } @else {
+    <p class="browse__status">
+      {{ catalog.results().length }} result(s)
+      @if (catalog.revision(); as rev) {
+        · catalog {{ rev }}
+      }
+    </p>
+
+    <ul class="browse__results">
+      @for (preset of catalog.results(); track preset.id) {
+        <li>
+          <cp-card [heading]="preset.vendor + ' · ' + preset.type">
+            <h2 class="browse__name">
+              @if (preset.match; as match) {
+                <cp-match-highlight [value]="preset.name" [ranges]="match.ranges" />
+              } @else {
+                {{ preset.name }}
+              }
+            </h2>
+            <p class="browse__spec">{{ preset.spec }}</p>
+          </cp-card>
+        </li>
+      } @empty {
+        <li class="browse__status">No presets match your search.</li>
+      }
+    </ul>
+  }
+</section>

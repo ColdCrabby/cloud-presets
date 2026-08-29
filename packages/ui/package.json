@@ -1,0 +1,25 @@
+{
+  "name": "@cloud-presets/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared Angular UI primitives consumed by both the public and vendor-admin apps.",
+  "exports": {
+    ".": "./src/public-api.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@angular/common": "^22.1.0",
+    "@angular/core": "^22.1.0"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/common": "^22.1.0",
+    "@angular/core": "^22.1.0",
+    "vitest": "^4.0.8"
+  }
+}
