@@ -10,3 +10,7 @@ docs/api-surface.md
 docs/preset-schema.md
 docs/presets-repo-layout.md
 docs/vendor-workflow.md
+
+# Vendored, generated schema files — never hand-edited, must stay byte-faithful
+# to the slicer's gen-schemas output. See schemas/README.md.
+schemas/*.json

@@ -18,8 +18,30 @@ There is **no database**. Git is the source of truth, the catalog is held in
 memory, and everything the API serves is derivable from a single commit. Delete
 the server and a new one rebuilds itself from `main`.
 
-> **Status: design phase.** This repository currently contains the architecture
-> and schema documentation only. No implementation code has been written yet.
+> **Status: early implementation.** The Go API skeleton, offline JWT auth, the
+> preset validator, and both Angular app shells exist. Ingest, search, vendor
+> endpoints, and GitHub PR automation are not built yet — see the
+> [open issues](https://github.com/ColdCrabby/cloud-presets/issues) for what's
+> next.
+
+---
+
+## Getting started
+
+```sh
+# Go API — see the Makefile for individual targets
+make build test         # compile and run the Go test suite
+make run                # serve the API on :8080 (ADDR to override)
+
+# Frontends — from the repo root
+pnpm install
+pnpm stub-api           # dependency-free stand-in for the Go API, on :8787
+pnpm start:public       # serve the public app on :4200 (proxies /v1 to the stub)
+pnpm test               # run every package's Vitest suite
+```
+
+See [docs/frontends.md](./docs/frontends.md) for the full frontend command
+reference and [the Makefile](./Makefile) for Go targets.
 
 ---
 
@@ -91,7 +113,7 @@ is therefore itself a reviewed pull request.
 
 ---
 
-## Planned stack
+## Stack
 
 | Layer | Choice |
 | --- | --- |

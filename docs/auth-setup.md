@@ -1,9 +1,9 @@
 # Auth Setup — Stytch B2B and Offline JWT Validation
 
 How to configure the Stytch B2B project and run the API's session-token
-middleware. This covers **identity only** — validating *who* is calling and
-surfacing their organization to handlers. Mapping an organization to *authority
-over a vendor namespace* (the `403` on ownership mismatch) is a separate concern
+middleware. This covers **identity only** — validating _who_ is calling and
+surfacing their organization to handlers. Mapping an organization to _authority
+over a vendor namespace_ (the `403` on ownership mismatch) is a separate concern
 decided against the Git manifest, described in
 [vendor-workflow.md](./vendor-workflow.md#authorization).
 
@@ -28,7 +28,7 @@ operational checklist.
 Do this once in the [Stytch dashboard](https://stytch.com/dashboard). These steps
 are console configuration, not code.
 
-1. **Create a B2B project.** Choose the *B2B SaaS Authentication* product, not
+1. **Create a B2B project.** Choose the _B2B SaaS Authentication_ product, not
    Consumer. The organization/member model is what maps to vendor companies and
    their staff.
 2. **Enable OAuth providers.** Turn on **GitHub** and **Google**. Vendor staff
@@ -46,7 +46,7 @@ are console configuration, not code.
    frontend/back-of-house flows, not by this offline validator) and any other
    credentials live in managed secret storage, injected as environment variables
    at deploy time — **never** committed to the repo or baked into the image. The
-   JWT validator itself needs no secret: it only fetches *public* JWKS.
+   JWT validator itself needs no secret: it only fetches _public_ JWKS.
 
 Test vs. live: Stytch serves test-environment JWKS from `test.stytch.com` and
 live from `api.stytch.com`. Set `STYTCH_JWKS_URL` explicitly for the test
@@ -60,16 +60,16 @@ The middleware reads its configuration from the environment via
 `auth.LoadConfigFromEnv()`. Only `STYTCH_PROJECT_ID` is required; the rest have
 sensible defaults derived from it.
 
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `STYTCH_PROJECT_ID` | **yes** | — | B2B project ID; the expected `aud` claim, and the basis for the default issuer and JWKS URL. |
-| `STYTCH_ISSUER` | no | `stytch.com/<project_id>` | Expected `iss` claim. Override for a custom domain. |
-| `STYTCH_AUDIENCE` | no | `<project_id>` | Expected `aud` claim. |
-| `STYTCH_JWKS_URL` | no | `https://api.stytch.com/v1/b2b/sessions/jwks/<project_id>` | Public signing keys. Point at `https://test.stytch.com/...` for the test environment. |
-| `STYTCH_MAX_TOKEN_AGE` | no | `5m30s` | Maximum age from `iat`, on top of `exp`. A Go duration string. |
+| Variable               | Required | Default                                                    | Purpose                                                                                      |
+| ---------------------- | -------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `STYTCH_PROJECT_ID`    | **yes**  | —                                                          | B2B project ID; the expected `aud` claim, and the basis for the default issuer and JWKS URL. |
+| `STYTCH_ISSUER`        | no       | `stytch.com/<project_id>`                                  | Expected `iss` claim. Override for a custom domain.                                          |
+| `STYTCH_AUDIENCE`      | no       | `<project_id>`                                             | Expected `aud` claim.                                                                        |
+| `STYTCH_JWKS_URL`      | no       | `https://api.stytch.com/v1/b2b/sessions/jwks/<project_id>` | Public signing keys. Point at `https://test.stytch.com/...` for the test environment.        |
+| `STYTCH_MAX_TOKEN_AGE` | no       | `5m30s`                                                    | Maximum age from `iat`, on top of `exp`. A Go duration string.                               |
 
 Because every value here is a public identifier or URL, this configuration is
-safe to log. The secrets that *are* sensitive belong to other parts of the
+safe to log. The secrets that _are_ sensitive belong to other parts of the
 system (GitHub App key, webhook HMAC) and are out of scope for token validation.
 
 ---
@@ -112,7 +112,7 @@ this without a restart:
 
 - Keys are fetched once at startup and **refreshed in the background** (default
   every 15 minutes), so the request path never fetches.
-- Because the cached set holds *every* published key, a token signed by either
+- Because the cached set holds _every_ published key, a token signed by either
   key during the overlap verifies.
 - If a token arrives signed by a key newer than the last background refresh, the
   middleware triggers a single **throttled** refresh and retries once, so a fresh
