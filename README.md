@@ -18,8 +18,10 @@ There is **no database**. Git is the source of truth, the catalog is held in
 memory, and everything the API serves is derivable from a single commit. Delete
 the server and a new one rebuilds itself from `main`.
 
-> **Status: design phase.** This repository currently contains the architecture
-> and schema documentation only. No implementation code has been written yet.
+> **Status: foundation.** The Go module and the Huma v2 API skeleton are in
+> place: a health endpoint, the in-memory catalog store, and build-time OpenAPI
+> export. Ingest, search, auth, and the frontends land in later waves. See
+> [Development](#development).
 
 ---
 
@@ -104,6 +106,36 @@ is therefore itself a reviewed pull request.
 
 The frontends follow the slicer UI's existing conventions rather than
 introducing a second house style.
+
+---
+
+## Development
+
+The API is a Go 1.25+ module using [Huma v2](https://github.com/danielgtaylor/huma)
+on the stdlib `http.ServeMux` (via the `humago` adapter). Package layout follows
+[ARCHITECTURE.md](./ARCHITECTURE.md#monorepo-layout): entrypoints live in
+[`cmd/`](./cmd), implementation in [`internal/`](./internal).
+
+```bash
+make build      # compile everything
+make test       # run the test suite
+make run        # start the server (ADDR defaults to :8080)
+make openapi    # write the OpenAPI 3.1 document (OPENAPI_OUT defaults to openapi.yaml)
+```
+
+`GET /v1/health` reports liveness plus readiness and the served catalog
+revision. Readiness is `false` and `revision` is `null` until the first ingest
+loads a catalog:
+
+```bash
+curl -s localhost:8080/v1/health
+# {"status":"ok","ready":false,"revision":null,"lastIngest":null}
+```
+
+Errors render as RFC 9457 `application/problem+json`. The build-time OpenAPI
+document ([openapi.yaml](./openapi.yaml)) is what the Angular client generator
+consumes — regenerate it with `make openapi` whenever request or response types
+change.
 
 ---
 
