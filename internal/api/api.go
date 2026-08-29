@@ -6,11 +6,13 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 
+	"github.com/ColdCrabby/cloud-presets/internal/auth"
 	"github.com/ColdCrabby/cloud-presets/internal/catalog"
 )
 
@@ -23,11 +25,30 @@ const BasePath = "/v1"
 // returns both the Huma API (for OpenAPI export) and the HTTP handler to
 // serve. The handler wraps the mux so unmatched routes and disallowed methods
 // also render as RFC 9457 application/problem+json.
-func New(holder *catalog.Holder) (huma.API, http.Handler) {
+//
+// When mw is non-nil, the caller-identity endpoint GET /v1/me is registered
+// behind it; when nil (e.g. the OpenAPI export), auth-gated routes are omitted.
+func New(holder *catalog.Holder, mw *auth.Middleware) (huma.API, http.Handler) {
 	mux := http.NewServeMux()
 	humaAPI := humago.New(mux, Config())
 	Register(humaAPI, holder)
+	if mw != nil {
+		mux.Handle("GET "+BasePath+"/me", mw.RequireAuth(http.HandlerFunc(handleMe)))
+	}
 	return humaAPI, &problemRouter{mux: mux}
+}
+
+// handleMe returns the validated caller's identity. It runs only behind the
+// auth middleware, so claims are always present.
+func handleMe(w http.ResponseWriter, r *http.Request) {
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"memberId":         claims.Subject,
+		"organizationId":   claims.OrganizationID,
+		"organizationSlug": claims.OrganizationSlug,
+		"roles":            claims.Roles,
+	})
 }
 
 // Register attaches every operation to api, reading served state from holder.

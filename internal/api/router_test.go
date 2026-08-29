@@ -24,7 +24,7 @@ func decodeProblem(t *testing.T, resp *http.Response) map[string]any {
 }
 
 func TestUnknownPathRendersProblemJSON(t *testing.T) {
-	_, handler := New(catalog.NewHolder())
+	_, handler := New(catalog.NewHolder(), nil)
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
 
@@ -47,7 +47,7 @@ func TestUnknownPathRendersProblemJSON(t *testing.T) {
 }
 
 func TestWrongMethodRendersProblemJSONWithAllow(t *testing.T) {
-	_, handler := New(catalog.NewHolder())
+	_, handler := New(catalog.NewHolder(), nil)
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
 
@@ -71,7 +71,7 @@ func TestWrongMethodRendersProblemJSONWithAllow(t *testing.T) {
 }
 
 func TestHealthRoutesThroughWrappedHandler(t *testing.T) {
-	_, handler := New(catalog.NewHolder())
+	_, handler := New(catalog.NewHolder(), nil)
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
 

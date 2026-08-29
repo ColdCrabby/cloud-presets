@@ -96,6 +96,9 @@ importers:
       '@cloud-presets/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@stytch/vanilla-js':
+        specifier: ^6.2.0
+        version: 6.2.0
       rxjs:
         specifier: ~7.8.0
         version: 7.8.2
@@ -1427,6 +1430,9 @@ packages:
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
+  '@stytch/vanilla-js@6.2.0':
+    resolution: {integrity: sha512-N7EEB1/EyY6EHmLNTSXSNy+0ZjbPiVVteO7OE99d4jXdDVzjAspZZYE0ldeFjt/0OIP4U9t04WGtoaXl6w/oYw==}
 
   '@tybys/wasm-util@0.10.3':
     resolution: {integrity: sha512-F3fo1MYrRJYL3zER0OUOmkutjr1Vp23m7OsSgp7nq4SP6OqX6C/56XFIPAl5bt3zaBRjmW7SGz3u/6LwFpYcOg==}
@@ -3757,6 +3763,8 @@ snapshots:
       - chokidar
 
   '@standard-schema/spec@1.1.0': {}
+
+  '@stytch/vanilla-js@6.2.0': {}
 
   '@tybys/wasm-util@0.10.3':
     dependencies:

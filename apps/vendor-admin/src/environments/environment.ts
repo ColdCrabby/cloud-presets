@@ -1,8 +1,8 @@
 /**
- * Runtime configuration for the vendor-admin app. `apiBaseUrl` is same-origin so
- * the generated client's requests are forwarded to the stub API by the
- * dev-server proxy (see proxy.conf.json). `stytchPublicToken` is a placeholder
- * for the real Stytch B2B integration wired in the auth issue.
+ * Runtime configuration for the vendor-admin app. `apiBaseUrl` is same-origin,
+ * so requests reach the Go API that serves this app. Set `stytchPublicToken` to
+ * a real Stytch B2B public token (`public-token-...`) to enable sign-in; left
+ * empty, the app uses a stub session.
  */
 export const environment = {
   production: false,

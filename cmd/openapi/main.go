@@ -25,7 +25,7 @@ func main() {
 	}
 
 	// Build the same API the server serves so the exported spec matches it.
-	humaAPI, _ := api.New(catalog.NewHolder())
+	humaAPI, _ := api.New(catalog.NewHolder(), nil)
 
 	doc, err := humaAPI.OpenAPI().YAML()
 	if err != nil {

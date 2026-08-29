@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build --base-href /admin/",
+    "build": "ng build --base-href /vendor/",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -19,6 +19,7 @@
     "@angular/router": "^22.1.0",
     "@cloud-presets/api-client": "workspace:*",
     "@cloud-presets/ui": "workspace:*",
+    "@stytch/vanilla-js": "^6.2.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

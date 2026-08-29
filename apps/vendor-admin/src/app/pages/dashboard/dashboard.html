@@ -2,13 +2,17 @@
   @if (!session.isAuthenticated()) {
     <cp-card heading="Sign in">
       <p>Sign in to manage your organization's presets.</p>
-      <cp-button (click)="session.signIn()">Sign in (stub)</cp-button>
+      @if (session.usesStytch) {
+        <div #loginHost></div>
+      } @else {
+        <cp-button (click)="session.signIn()">Sign in (stub)</cp-button>
+      }
     </cp-card>
   } @else {
     <div class="dashboard__bar">
       <div>
-        <strong>{{ session.member()?.organizationName }}</strong>
-        <span class="dashboard__email">{{ session.member()?.email }}</span>
+        <strong>{{ session.member()?.organizationSlug }}</strong>
+        <span class="dashboard__email">{{ session.member()?.memberId }}</span>
       </div>
       <cp-button variant="ghost" (click)="session.signOut()">Sign out</cp-button>
     </div>

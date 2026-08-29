@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/ColdCrabby/cloud-presets/internal/api"
+	"github.com/ColdCrabby/cloud-presets/internal/auth"
 	"github.com/ColdCrabby/cloud-presets/internal/catalog"
 	ghapp "github.com/ColdCrabby/cloud-presets/internal/github"
 )
@@ -27,7 +28,7 @@ const defaultPresetsRepository = "ColdCrabby/presets"
 // Default locations of the built Angular apps, overridable via env.
 const (
 	defaultPublicDir = "apps/public/dist/public/browser"
-	defaultAdminDir  = "apps/vendor-admin/dist/vendor-admin/browser"
+	defaultVendorDir = "apps/vendor-admin/dist/vendor-admin/browser"
 )
 
 // installationCheckTimeout bounds the startup preflight so an unreachable or
@@ -53,7 +54,7 @@ func main() {
 	}
 
 	holder := catalog.NewHolder()
-	_, apiHandler := api.New(holder)
+	_, apiHandler := api.New(holder, newAuthMiddleware())
 
 	handler := withFrontends(apiHandler)
 
@@ -64,19 +65,19 @@ func main() {
 }
 
 // withFrontends mounts the API under /v1 and serves the two built Angular apps:
-// the public app at / and the vendor-admin app at /admin/. Missing build dirs
+// the public app at / and the vendor-admin app at /vendor/. Missing build dirs
 // are skipped so the API still serves on its own.
 func withFrontends(apiHandler http.Handler) http.Handler {
 	publicDir := envOr("PUBLIC_DIR", defaultPublicDir)
-	adminDir := envOr("ADMIN_DIR", defaultAdminDir)
+	vendorDir := envOr("VENDOR_DIR", defaultVendorDir)
 
 	mux := http.NewServeMux()
 	mux.Handle(api.BasePath+"/", apiHandler)
 
-	if dirHasIndex(adminDir) {
-		mux.Handle("/admin/", spaHandler{root: adminDir, prefix: "/admin/"})
+	if dirHasIndex(vendorDir) {
+		mux.Handle("/vendor/", spaHandler{root: vendorDir, prefix: "/vendor/"})
 	} else {
-		log.Printf("frontends: admin build not found at %s, /admin disabled", adminDir)
+		log.Printf("frontends: vendor build not found at %s, /vendor disabled", vendorDir)
 	}
 
 	if dirHasIndex(publicDir) {
@@ -86,6 +87,28 @@ func withFrontends(apiHandler http.Handler) http.Handler {
 	}
 
 	return mux
+}
+
+// newAuthMiddleware builds the Stytch session-JWT middleware from the
+// environment. When STYTCH_PROJECT_ID is unset, auth is disabled and nil is
+// returned so the API still serves unprotected routes.
+func newAuthMiddleware() *auth.Middleware {
+	if os.Getenv("STYTCH_PROJECT_ID") == "" {
+		log.Print("auth: no STYTCH_PROJECT_ID in the environment, vendor sign-in is disabled")
+		return nil
+	}
+	cfg, err := auth.LoadConfigFromEnv()
+	if err != nil {
+		log.Printf("auth: invalid configuration, vendor sign-in is disabled: %v", err)
+		return nil
+	}
+	verifier, err := auth.New(context.Background(), cfg)
+	if err != nil {
+		log.Printf("auth: verifier unavailable, vendor sign-in is disabled: %v", err)
+		return nil
+	}
+	log.Print("auth: Stytch session validation enabled")
+	return auth.NewMiddleware(verifier)
 }
 
 func envOr(key, fallback string) string {
