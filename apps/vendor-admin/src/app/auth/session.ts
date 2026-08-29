@@ -20,11 +20,13 @@ export interface Member {
 @Injectable({ providedIn: 'root' })
 export class SessionStore {
   private readonly _member = signal<Member | null>(null);
+  private readonly _authError = signal<string | null>(null);
   private sessionJwt: string | null = null;
   private stytch: StytchUIClient | null = null;
   private mounted = false;
 
   readonly member = this._member.asReadonly();
+  readonly authError = this._authError.asReadonly();
   readonly isAuthenticated = computed(() => this._member() !== null);
   readonly usesStytch = this.hasRealToken();
 
@@ -34,13 +36,19 @@ export class SessionStore {
     if (this.usesStytch) {
       this.stytch = new StytchUIClient(environment.stytchPublicToken);
       this.stytch.session.onChange(() => void this.syncFromStytch());
-      void this.syncFromStytch();
+      // Handle a magic-link/OAuth redirect ourselves so the single-use token is
+      // authenticated exactly once (the UI component would race us for it).
+      if (this.callbackToken()) {
+        void this.handleCallback();
+      } else {
+        void this.syncFromStytch();
+      }
     }
   }
 
-  /** Mount the Stytch login UI into host. No-op in stub mode. */
+  /** Mount the Stytch login UI into host. No-op in stub mode or during callback. */
   mountLogin(host: HTMLElement): void {
-    if (!this.stytch || this.mounted) {
+    if (!this.stytch || this.mounted || this.callbackToken()) {
       return;
     }
     this.mounted = true;
@@ -57,13 +65,8 @@ export class SessionStore {
     el.render({
       client: this.stytch,
       config: {
-        products: [Products.emailMagicLinks, Products.oauth],
+        products: [Products.emailMagicLinks],
         emailMagicLinksOptions: {
-          loginRedirectURL: redirectURL,
-          signupRedirectURL: redirectURL,
-        },
-        oauthOptions: {
-          providers: [{ type: 'google' }, { type: 'github' }],
           loginRedirectURL: redirectURL,
           signupRedirectURL: redirectURL,
         },
@@ -92,6 +95,36 @@ export class SessionStore {
   private hasRealToken(): boolean {
     const t = environment.stytchPublicToken;
     return !!t && t.startsWith('public-token-');
+  }
+
+  /** The Stytch token from a magic-link/OAuth redirect, if this is a callback. */
+  private callbackToken(): { token: string; type: string } | null {
+    const p = new URL(globalThis.location.href).searchParams;
+    const token = p.get('token');
+    const type = p.get('stytch_token_type');
+    return token && type ? { token, type } : null;
+  }
+
+  /** Authenticate a redirect token exactly once and surface the real error. */
+  private async handleCallback(): Promise<void> {
+    const cb = this.callbackToken();
+    if (!this.stytch || !cb) {
+      return;
+    }
+    try {
+      if (cb.type === 'oauth') {
+        await this.stytch.oauth.authenticate(cb.token, { session_duration_minutes: 60 });
+      } else {
+        await this.stytch.magicLinks.authenticate(cb.token, { session_duration_minutes: 60 });
+      }
+      this.clearAuthQuery();
+      await this.syncFromStytch();
+    } catch (e) {
+      this.clearAuthQuery();
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('stytch callback authenticate failed:', e);
+      this._authError.set(msg);
+    }
   }
 
   private async syncFromStytch(): Promise<void> {
