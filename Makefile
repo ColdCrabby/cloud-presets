@@ -6,15 +6,15 @@ OPENAPI_OUT ?= openapi.yaml
 
 .PHONY: build run dev test vet tidy openapi
 
-## build: compile the Go API and build both Angular apps.
+## build: compile the Go API binary and build both Angular apps.
 build:
-	$(GO) build ./...
+	$(GO) build -o bin/server ./cmd/server
 	$(PNPM) install --frozen-lockfile
 	$(PNPM) build
 
 ## run: serve the Go API and both built frontends from one server (binds $PORT).
 run:
-	$(GO) run ./cmd/server
+	./bin/server
 
 ## dev: start the Go API and both Angular dev servers together.
 dev:
