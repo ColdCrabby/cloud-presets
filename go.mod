@@ -5,6 +5,9 @@ go 1.27.0
 require (
 	github.com/danielgtaylor/huma/v2 v2.39.1
 	github.com/lestrrat-go/jwx/v2 v2.1.7
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
+	golang.org/x/text v0.40.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
