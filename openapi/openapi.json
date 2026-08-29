@@ -1,0 +1,250 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cloud Presets API",
+    "version": "0.1.0-stub",
+    "description": "Stub OpenAPI 3.1 document derived from docs/api-surface.md. Replaced by the Huma-generated spec once the API skeleton (issue #3) exports it; the frontends regenerate their client from that file with `pnpm gen:client`."
+  },
+  "servers": [{ "url": "/" }],
+  "tags": [{ "name": "public" }, { "name": "vendor" }, { "name": "ops" }],
+  "paths": {
+    "/v1/presets": {
+      "get": {
+        "operationId": "searchPresets",
+        "tags": ["public"],
+        "summary": "Search or browse the preset catalog",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Fuzzy query across name, vendor, model, material. Omit to browse."
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/PresetType" }
+          },
+          { "name": "vendor", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "material", "in": "query", "required": false, "schema": { "type": "string" } },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "minimum": 1, "maximum": 100 }
+          },
+          { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of preset summaries.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/SearchResponse" } }
+            }
+          },
+          "409": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/presets/{id}": {
+      "get": {
+        "operationId": "getPreset",
+        "tags": ["public"],
+        "summary": "Fetch a complete preset in the slicer's profile shape",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "The complete preset.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Preset" } }
+            }
+          },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "410": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/vendors": {
+      "get": {
+        "operationId": "listVendors",
+        "tags": ["public"],
+        "summary": "List the vendor directory",
+        "responses": {
+          "200": {
+            "description": "All known vendors.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Vendor" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/vendor/presets": {
+      "get": {
+        "operationId": "listVendorPresets",
+        "tags": ["vendor"],
+        "summary": "List presets owned by the caller's organization",
+        "security": [{ "stytchSession": [] }],
+        "responses": {
+          "200": {
+            "description": "The presets the caller's organization owns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PresetSummary" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "operationId": "getHealth",
+        "tags": ["ops"],
+        "summary": "Liveness and readiness, including the served catalog revision",
+        "responses": {
+          "200": {
+            "description": "Health report.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Health" } }
+            }
+          },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "stytchSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "RFC 9457 problem details.",
+        "content": {
+          "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } }
+        }
+      }
+    },
+    "schemas": {
+      "PresetType": {
+        "type": "string",
+        "enum": ["printer", "filament", "process"]
+      },
+      "MatchRange": {
+        "type": "array",
+        "description": "A [start, end) pair of UTF-16 code-unit offsets into the original field value.",
+        "items": { "type": "integer", "format": "int32" },
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "MatchInfo": {
+        "type": "object",
+        "description": "Which field matched the query and where, so the client can highlight it.",
+        "properties": {
+          "field": { "type": "string" },
+          "ranges": { "type": "array", "items": { "$ref": "#/components/schemas/MatchRange" } }
+        },
+        "required": ["field", "ranges"]
+      },
+      "PresetSummary": {
+        "type": "object",
+        "description": "Enough to render a result row without shipping every slicing parameter.",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "$ref": "#/components/schemas/PresetType" },
+          "name": { "type": "string" },
+          "vendor": { "type": "string" },
+          "model": { "type": ["string", "null"] },
+          "material": { "type": ["string", "null"] },
+          "spec": { "type": "string", "description": "A short human-readable spec string." },
+          "match": { "$ref": "#/components/schemas/MatchInfo" }
+        },
+        "required": ["id", "type", "name", "vendor", "spec"]
+      },
+      "SearchResponse": {
+        "type": "object",
+        "properties": {
+          "results": { "type": "array", "items": { "$ref": "#/components/schemas/PresetSummary" } },
+          "next_cursor": {
+            "type": ["string", "null"],
+            "description": "Opaque continuation token; absent on the last page."
+          },
+          "revision": {
+            "type": "string",
+            "description": "Catalog revision the page was served from."
+          }
+        },
+        "required": ["results"]
+      },
+      "Preset": {
+        "type": "object",
+        "description": "The complete preset in the slicer's profile shape.",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "$ref": "#/components/schemas/PresetType" },
+          "name": { "type": "string" },
+          "vendor": { "type": "string" },
+          "source": { "type": "string", "const": "catalog" },
+          "import_url": { "type": "string", "format": "uri" },
+          "params": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["id", "type", "name", "vendor", "source", "import_url", "params"]
+      },
+      "Vendor": {
+        "type": "object",
+        "properties": {
+          "slug": { "type": "string" },
+          "display_name": { "type": "string" },
+          "brands": { "type": "array", "items": { "type": "string" } },
+          "website": { "type": ["string", "null"], "format": "uri" }
+        },
+        "required": ["slug", "display_name", "brands"]
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "ready": { "type": "boolean" },
+          "revision": { "type": ["string", "null"] },
+          "last_ingest_at": { "type": ["string", "null"], "format": "date-time" }
+        },
+        "required": ["ready"]
+      },
+      "ProblemError": {
+        "type": "object",
+        "properties": {
+          "location": { "type": "string" },
+          "message": { "type": "string" },
+          "value": {}
+        },
+        "required": ["location", "message"]
+      },
+      "Problem": {
+        "type": "object",
+        "description": "RFC 9457 problem details.",
+        "properties": {
+          "type": { "type": "string", "format": "uri" },
+          "title": { "type": "string" },
+          "status": { "type": "integer", "format": "int32" },
+          "detail": { "type": "string" },
+          "errors": { "type": "array", "items": { "$ref": "#/components/schemas/ProblemError" } }
+        }
+      }
+    }
+  }
+}

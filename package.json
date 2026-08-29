@@ -1,0 +1,23 @@
+{
+  "name": "cloud-presets-frontends",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.13.1",
+  "scripts": {
+    "build": "pnpm --filter \"./apps/*\" run build",
+    "build:public": "pnpm --filter public build",
+    "build:vendor-admin": "pnpm --filter vendor-admin build",
+    "test": "pnpm -r run test",
+    "test:apps": "pnpm --filter \"./apps/*\" run test",
+    "start:public": "pnpm --filter public start",
+    "start:vendor-admin": "pnpm --filter vendor-admin start",
+    "stub-api": "node tools/stub-api/server.mjs",
+    "gen:client": "openapi-ts",
+    "format": "prettier --write \"**/*.{ts,html,scss,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,html,scss,json,md}\""
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.99.0",
+    "prettier": "^3.9.6"
+  }
+}

@@ -30,3 +30,15 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Node / Angular frontends
+node_modules/
+**/node_modules/
+/apps/*/dist/
+/dist/
+.angular/
+**/.angular/cache/
+out-tsc/
+**/out-tsc/
+npm-debug.log
+pnpm-debug.log

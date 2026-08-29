@@ -1,0 +1,17 @@
+:host {
+  display: block;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--cp-border, #e5e7eb);
+  border-radius: 0.75rem;
+  background-color: var(--cp-surface, #fff);
+}
+
+.cp-card__heading {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.cp-card__body {
+  color: var(--cp-fg, #111214);
+}
