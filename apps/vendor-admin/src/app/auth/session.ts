@@ -1,5 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { StytchUIClient, mountLogin, Products } from '@stytch/vanilla-js';
+import { StytchUIClient, StytchUI, Products } from '@stytch/vanilla-js';
 import { setCloudPresetsAuthTokenProvider } from '@cloud-presets/api-client';
 import { environment } from '../../environments/environment';
 
@@ -42,15 +42,18 @@ export class SessionStore {
     if (!this.stytch) {
       return;
     }
-    if (!host.id) {
-      host.id = 'stytch-login';
+    if (!customElements.get('stytch-login')) {
+      customElements.define('stytch-login', StytchUI);
     }
+    const el = document.createElement('stytch-login') as HTMLElement & {
+      render: (opts: unknown) => void;
+    };
+    host.replaceChildren(el);
     // Consumer login uses the Login/Sign-up redirect URLs registered in the
     // Stytch dashboard — no Discovery type needed.
     const redirectURL = `${globalThis.location.origin}/vendor/`;
-    mountLogin({
+    el.render({
       client: this.stytch,
-      elementId: `#${host.id}`,
       config: {
         products: [Products.emailMagicLinks, Products.oauth],
         emailMagicLinksOptions: {
