@@ -29,18 +29,12 @@ the server and a new one rebuilds itself from `main`.
 ## Getting started
 
 ```sh
-# Go API — see the Makefile for individual targets
-make build              # compile the Go API
-make run                # serve the API on :8080 (ADDR to override)
-
-# Frontends — from the repo root
-pnpm install
-pnpm stub-api           # dependency-free stand-in for the Go API, on :8787
-pnpm start:public       # serve the public app on :4200 (proxies /v1 to the stub)
+make build   # compile the Go API, build both Angular apps
+make run     # run the API and both Angular dev servers together
 ```
 
-See [docs/frontends.md](./docs/frontends.md) for the full frontend command
-reference and [the Makefile](./Makefile) for Go targets.
+See [docs/frontends.md](./docs/frontends.md) for individual frontend commands
+and [the Makefile](./Makefile) for individual Go targets.
 
 ---
 

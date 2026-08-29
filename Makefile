@@ -1,17 +1,23 @@
-# Cold Crabby preset cloud — Go API build targets.
+# Cold Crabby preset cloud — build targets for the Go API and both Angular apps.
 
 GO ?= go
+PNPM ?= pnpm
 OPENAPI_OUT ?= openapi.yaml
 
 .PHONY: build run test vet tidy openapi
 
-## build: compile all packages and commands.
+## build: compile the Go API and build both Angular apps.
 build:
 	$(GO) build ./...
+	$(PNPM) install --frozen-lockfile
+	$(PNPM) build
 
-## run: start the API server (ADDR overrides the listen address).
+## run: start the Go API and both Angular dev servers together.
 run:
-	$(GO) run ./cmd/server
+	$(GO) run ./cmd/server & \
+	$(PNPM) start:public & \
+	$(PNPM) start:vendor-admin & \
+	wait
 
 ## test: run the test suite.
 test:
