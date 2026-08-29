@@ -1,0 +1,1204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProcessProfile",
+  "description": "A process (print / quality) profile.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "description": "Stable identifier (uuid-ish string; catalog ids are human-readable).",
+      "type": "string"
+    },
+    "name": {
+      "description": "Human-readable name shown in the UI.",
+      "type": "string"
+    },
+    "source": {
+      "description": "Where this profile came from.",
+      "$ref": "#/$defs/ProfileSource",
+      "default": "user"
+    },
+    "based_on": {
+      "description": "Catalog id this profile was imported/derived from, if any.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "import_url": {
+      "description": "Provenance for a profile fetched from the frontend's cloud catalog: the\nsource API URL it was imported from. Purely informational — the slicer\nnever reads it; an imported profile is treated exactly like a\nhand-made one.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "label_ids": {
+      "description": "Ids of user-defined labels attached to this profile (flat, cross-area).",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "quality": {
+      "description": "Coarse quality tag.",
+      "$ref": "#/$defs/PrintQuality",
+      "default": "standard"
+    },
+    "params": {
+      "description": "Sparse `SlicingParams` overrides this profile contributes (e.g.\n`layer_height`, `wall_count`, `wall_generator`, `print_speed`,\n`infill_density`, `seam_position`, adhesion/support keys).",
+      "$ref": "#/$defs/SlicingParams",
+      "default": null
+    }
+  },
+  "required": [
+    "id",
+    "name"
+  ],
+  "$defs": {
+    "ProfileSource": {
+      "description": "Where a profile came from. Drives badges and edit/delete affordances in the\nsettings UI.\n\n- `builtin` — the single offline default shipped with the app for a given\n  category. Always present, editable but not deletable.\n- `user` — created from scratch, duplicated, or imported+customised.\n- `catalog` — a read-only entry served from the bundled catalog. Importing\n  one produces a `user` copy whose [`ProfileMeta::based_on`] points back at\n  the catalog id.",
+      "oneOf": [
+        {
+          "description": "The single offline default for a category.",
+          "type": "string",
+          "const": "builtin"
+        },
+        {
+          "description": "A fully user-owned profile.",
+          "type": "string",
+          "const": "user"
+        },
+        {
+          "description": "A read-only bundled-catalog entry.",
+          "type": "string",
+          "const": "catalog"
+        }
+      ]
+    },
+    "PrintQuality": {
+      "description": "Coarse quality tag used for badges / sorting.",
+      "oneOf": [
+        {
+          "description": "Fast, coarse.",
+          "type": "string",
+          "const": "draft"
+        },
+        {
+          "description": "Balanced default.",
+          "type": "string",
+          "const": "standard"
+        },
+        {
+          "description": "Slow, fine detail.",
+          "type": "string",
+          "const": "fine"
+        }
+      ]
+    },
+    "SlicingParams": {
+      "description": "Parameters that control how a model is sliced and printed.\n\nAll dimensional values are in millimeters; speeds in mm/s;\ntemperatures in °C; infill density as a fraction 0.0–1.0.",
+      "type": "object",
+      "properties": {
+        "layer_height": {
+          "description": "Layer height in mm.\n\nSmaller values produce finer detail but increase print time.\n**Typical:** 0.05–0.35 mm.",
+          "type": "number",
+          "format": "double",
+          "default": 0.2,
+          "x-group": "Layer"
+        },
+        "wall_generator": {
+          "description": "Wall (perimeter) generation algorithm.\n\nSupported values:\n- `classic` — fixed-width concentric perimeters with thin-wall gap fill (fast, robust).\n- `arachne` — medial-axis variable-width walls that better fill thin features (engraved text, tapering ribs).\n\n**Default:** `arachne`.",
+          "$ref": "#/$defs/WallGenerator",
+          "default": "arachne",
+          "x-group": "Walls"
+        },
+        "wall_count": {
+          "description": "Number of perimeter (wall) beads per layer.\n\nArachne places up to this many concentric wall paths around each shell polygon.\nThe innermost bead may have variable width when narrow space remains.\n**Typical:** 2–4.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0,
+          "default": 3,
+          "x-group": "Walls"
+        },
+        "wall_line_width_min": {
+          "description": "Minimum allowed bead width as a fraction of nozzle diameter.\n\nBeads narrower than `wall_line_width_min × nozzle_diameter_mm` are skipped entirely.\n**Range:** 0.5–1.0.",
+          "type": "number",
+          "format": "double",
+          "default": 0.85,
+          "x-group": "Walls"
+        },
+        "wall_line_width_max": {
+          "description": "Maximum allowed bead width as a fraction of nozzle diameter.\n\nVariable-width beads are capped at this multiple to avoid excessive over-extrusion at corners.\n**Range:** 1.0–2.0.",
+          "type": "number",
+          "format": "double",
+          "default": 1.5,
+          "x-group": "Walls"
+        },
+        "wall_transition_threshold": {
+          "description": "Minimum wall space (fraction of nozzle diameter) before bead count decreases.\n\nWhen remaining space is narrower than `wall_transition_threshold × nozzle_diameter_mm`,\nthe algorithm widens the existing innermost bead instead of adding a new one.\n**Typical:** 0.4–0.8.",
+          "type": "number",
+          "format": "double",
+          "default": 0.6,
+          "x-group": "Walls"
+        },
+        "wall_transition_length": {
+          "description": "Length (mm) over which a bead-count transition is smoothed.\n\nLarger values produce a gradual width ramp at transitions; smaller values create abrupt changes.\n**Typical:** 0.5–2.0 mm.",
+          "type": "number",
+          "format": "double",
+          "default": 1.0,
+          "x-group": "Walls"
+        },
+        "wall_distribution_count": {
+          "description": "Number of inner wall beads that absorb width variation.\n\nWhen space is too narrow for a separate bead, up to this many innermost beads\nare widened proportionally to fill the gap.\n**Typical:** 1–2.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0,
+          "default": 1,
+          "x-group": "Walls"
+        },
+        "wall_transition_angle": {
+          "description": "Minimum medial-axis angle (degrees) at which a bead-count transition may occur.\n\nArachne-walk only.  A bead is added or removed along the medial axis only where\nthe local branch angle exceeds this, so ribs are not placed on near-parallel\nedges where the count is ambiguous.\n**Typical:** 5–20°.",
+          "type": "number",
+          "format": "double",
+          "default": 10.0,
+          "x-group": "Walls"
+        },
+        "wall_transition_filter_distance": {
+          "description": "Minimum spacing (mm) between adjacent bead-count transitions.\n\nArachne-walk only.  Transitions closer together than this are merged, de-noising\nrapid count flip-flops along a faceted or slightly-tapering wall.\n**Typical:** 0.05–0.3 mm.",
+          "type": "number",
+          "format": "double",
+          "default": 0.1,
+          "x-group": "Walls"
+        },
+        "seam_position": {
+          "description": "Where to place the seam (start/end point) of each closed perimeter loop.\n\nSupported values:\n- `nearest` — closest vertex to current nozzle position (fastest, scattered seams).\n- `rear` — vertex with maximum Y (single seam line on the back of the model).\n- `aligned` — vertex closest to a fixed direction; consistent across layers.\n- `sharpest_corner` — vertex with the sharpest convex angle (hidden in geometry).\n- `random` — different random vertex per loop (no visible seam line).\n\n**Default:** `nearest`.",
+          "$ref": "#/$defs/SeamPosition",
+          "default": "nearest",
+          "x-group": "Walls"
+        },
+        "infill_density": {
+          "description": "Infill density as a fraction (0.0–1.0).\n\n- `0.0` = completely hollow\n- `0.15`–`0.3` = typical range for good strength/speed balance\n- `1.0` = fully solid",
+          "type": "number",
+          "format": "double",
+          "default": 0.2,
+          "x-group": "Infill"
+        },
+        "infill_pattern": {
+          "description": "Infill pattern geometry.\n\nSupported values:\n- `rectilinear` — alternating straight lines (fastest)\n- `grid` — crossed lines forming a grid\n- `honeycomb` — hexagonal cells (good strength-to-weight ratio)\n- `gyroid` — smooth triply-periodic surface (excellent isotropy)",
+          "$ref": "#/$defs/InfillPattern",
+          "default": "Rectilinear",
+          "x-group": "Infill"
+        },
+        "infill_base_angle": {
+          "description": "Base angle in degrees for sparse infill lines.\n\nAlternating layers rotate by +90° on top of this base angle to create a crossing pattern.\n**Default:** 45°.",
+          "type": "number",
+          "format": "double",
+          "default": 45.0,
+          "x-group": "Infill"
+        },
+        "print_speed": {
+          "description": "Default print speed in mm/s used as a fallback.\n\nSlower speeds improve layer adhesion and surface quality; faster speeds reduce print time.\nRole-specific speeds (perimeter_speed, infill_speed, etc.) take precedence when set to a\npositive value.\n**Typical:** 40–100 mm/s.",
+          "type": "number",
+          "format": "double",
+          "default": 60.0,
+          "x-group": "Speed"
+        },
+        "perimeter_speed": {
+          "description": "Speed for outer and inner perimeter (wall) extrusions in mm/s.\n\nLower speeds improve surface quality and layer adhesion on perimeters.\nSet to `0` to fall back to `print_speed`.\n**Typical:** 40–50 mm/s.",
+          "type": "number",
+          "format": "double",
+          "default": 45.0,
+          "x-group": "Speed"
+        },
+        "infill_speed": {
+          "description": "Speed for sparse infill extrusions in mm/s.\n\nHigher speeds are acceptable for infill since it is not visible.\nSet to `0` to fall back to `print_speed`.\n**Typical:** 60–80 mm/s.",
+          "type": "number",
+          "format": "double",
+          "default": 70.0,
+          "x-group": "Speed"
+        },
+        "bridge_speed": {
+          "description": "Speed for bridge extrusions spanning unsupported gaps in mm/s.\n\nSlower speeds with high fan cooling reduce sagging on bridges.\nSet to `0` to fall back to `print_speed`.\n**Typical:** 20–30 mm/s.",
+          "type": "number",
+          "format": "double",
+          "default": 25.0,
+          "x-group": "Speed"
+        },
+        "bridge_flow_ratio": {
+          "description": "Flow ratio for bridge extrusions (0.0–1.5).\n\nReducing the flow rate for bridges improves stiffness by letting the strand\ncool and tension in mid-air before the next line lands on it.  Values below\n1.0 under-extrude intentionally; the reduced bead width stretches across the\ngap with less sag.\n**Default:** 0.8 (80% of normal flow).",
+          "type": "number",
+          "format": "double",
+          "default": 0.8,
+          "x-group": "Speed"
+        },
+        "bridge_min_area_mm2": {
+          "description": "Minimum area in mm² for an unsupported region to be classified as a bridge.\n\nTiny slivers of unsupported area (caused by sub-millimetre layer-to-layer wall\njitter on features like embossed text or fine ridges) below this threshold are\nclassified as ordinary `BottomSurface` solid infill instead of `Bridge`.  This\nmatches OrcaSlicer's `min_bridge_area` filter and prevents stippling of the\npreview with one-line bridge fragments.\n**Default:** 0.5 mm² (≈ a 0.7 × 0.7 mm sliver). Set to `0.0` to disable.",
+          "type": "number",
+          "format": "double",
+          "default": 0.5,
+          "x-group": "Quality"
+        },
+        "bridge_noise_filter_mm": {
+          "description": "Morphological-opening radius in mm applied to bridge regions.\n\nThe unsupported area is eroded inward by this amount and then dilated back —\nremoving thin slivers and filament-thin connecting strands that arise from\nsub-pixel layer-to-layer geometry differences.  Cleans up the noisy bridges\nthat show up around fine surface features (e.g. Benchy's embossed name).\n**Default:** 0.05 mm (just enough to wipe sub-pixel rounding from\nClipper2's Centi quantisation; small enough to preserve real\n0.4 mm-wide bridge frames around windows).  Set to `0.0` to disable.",
+          "type": "number",
+          "format": "double",
+          "default": 0.05,
+          "x-group": "Quality"
+        },
+        "bridge_anchor_mm": {
+          "description": "Anchor expansion length in mm at each end of every bridge.\n\nAfter detecting the unsupported region, it is dilated by this amount and\nre-clipped to the layer footprint so each bridge strand bites into the\nadjacent supported solid material.  Without this the bridge ends mid-air at\nthe wall edge instead of being anchored, causing droopy strands.  Matches\nPrusaSlicer / OrcaSlicer `bridge_anchor` behaviour.\n**Default:** 0.5 mm.  Larger values cause bridges around small features\n(text, embossed details) to expand past the first inner wall and look\nvisually wrong, even though they print fine.  Set to `0.0` to disable\nanchoring.",
+          "type": "number",
+          "format": "double",
+          "default": 0.4,
+          "x-group": "Quality"
+        },
+        "top_surface_speed": {
+          "description": "Speed for top and bottom solid surface infill in mm/s.\n\nSlightly slower than infill to improve surface finish.\nSet to `0` to fall back to `print_speed`.\n**Typical:** 40–50 mm/s.",
+          "type": "number",
+          "format": "double",
+          "default": 40.0,
+          "x-group": "Speed"
+        },
+        "gap_fill_speed": {
+          "description": "Speed for gap-fill (thin-wall medial) extrusions in mm/s.\n\nGap fill lays narrow, variable-width beads into spaces too thin for a full\nperimeter.  A slower speed keeps pressure stable in these short, narrow moves.\nSet to `0` to fall back to `perimeter_speed` (then `print_speed`).\n**Typical:** 20–40 mm/s.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Speed"
+        },
+        "gap_fill_min_length_mm": {
+          "description": "Minimum length in mm for a gap-fill bead to be kept.\n\nGap-fill beads shorter than this are dropped to avoid stringy sub-millimetre\ndribbles the medial pass finds along faceted boundaries — the isolated \"splat\"\nbeads that waste print time on a retract/travel/un-retract cycle and risk\nfilament grinding for a mechanically-insignificant dab.  Set to `0` to use the\nautomatic default (twice the nozzle diameter), which matches the faceting-noise\nfloor used when de-noising the medial skeleton; the residual such short beads\nwould have filled is bridged by the squish of the flanking wall beads.\n**Typical:** 0.4–1.0 mm.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Walls"
+        },
+        "wall_overlap_compensation": {
+          "description": "Wall overlap flow compensation strength (0.0–1.0).\n\nWhere wall beads run closer than their combined width — tight slots, ~180°\nhairpins, acute concave corners — a bead would deposit material into space an\nadjacent bead already filled (over-extrusion, blobs).  This scales extrusion\n*down* across the overlap so the total deposited volume stays correct.  `0.0`\ndisables it; `1.0` fully compensates.\n\nThe Arachne generators already place non-overlapping beads (overlap is removed in\nthe coverage/beading step and gap fill lives in the *uncovered* residual), so\ncompensation is unnecessary there and **off by default** — enabling it would\nshed clean walls that abut gap fill at nominal spacing.  Raise it only for a\ngenerator that emits genuinely overlapping walls.\n**Default:** 0.0.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Walls"
+        },
+        "first_layer_speed": {
+          "description": "Speed for all extrusions on the first layer in mm/s.\n\nSlower first-layer speeds improve bed adhesion.\nSet to `0` to fall back to `print_speed`.\n**Typical:** 20–30 mm/s.",
+          "type": "number",
+          "format": "double",
+          "default": 25.0,
+          "x-group": "Speed"
+        },
+        "fan_speed": {
+          "description": "Part-cooling fan speed for normal extrusions as a fraction (0.0–1.0).\n\n- `0.0` = fan off\n- `1.0` = full speed\n**Typical:** 1.0 (100%).",
+          "type": "number",
+          "format": "double",
+          "default": 1.0,
+          "x-group": "Cooling"
+        },
+        "bridge_fan_speed": {
+          "description": "Part-cooling fan speed when printing bridge extrusions as a fraction (0.0–1.0).\n\nHigh fan speeds cool bridge material rapidly, reducing sag.\n**Typical:** 1.0 (100%).",
+          "type": "number",
+          "format": "double",
+          "default": 1.0,
+          "x-group": "Cooling"
+        },
+        "first_layer_fan_speed": {
+          "description": "Part-cooling fan speed on the first layer as a fraction (0.0–1.0).\n\nTypically disabled on the first layer to improve bed adhesion.\n**Typical:** 0.0 (off).",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Cooling"
+        },
+        "coasting_distance_mm": {
+          "description": "Coasting distance in mm: stop extruding this far before the end of a perimeter.\n\nReduces nozzle pressure at the seam, preventing blobs and improving surface quality.\nSet to `0.0` to disable.\n**Typical:** 0.1–0.3 mm.",
+          "type": "number",
+          "format": "double",
+          "default": 0.2,
+          "x-group": "Speed"
+        },
+        "nozzle_temp": {
+          "description": "Nozzle temperature in °C.\n\nMaterial guidelines:\n- **PLA:** 200–210 °C\n- **PETG:** 230–250 °C\n- **ABS:** 240–260 °C",
+          "type": "number",
+          "format": "double",
+          "default": 210.0,
+          "x-group": "Temperature"
+        },
+        "bed_temp": {
+          "description": "Heated bed temperature in °C.\n\nMaterial guidelines:\n- **PLA:** 60–80 °C\n- **PETG:** 80–100 °C\n- **ABS:** 100–120 °C\n\nSet to `0` for an unheated bed.",
+          "type": "number",
+          "format": "double",
+          "default": 60.0,
+          "x-group": "Temperature"
+        },
+        "top_layers": {
+          "description": "Number of solid top layers (horizontal surfaces facing up).\n\nMore layers improve surface quality and reduce infill show-through.\n**Typical:** 4–6 layers at 0.2 mm layer height.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0,
+          "default": 3,
+          "x-group": "Surfaces"
+        },
+        "bottom_layers": {
+          "description": "Number of solid bottom layers (horizontal surfaces facing down).\n\nMore layers improve bottom surface finish and bed adhesion strength.\n**Typical:** 3–4 layers.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0,
+          "default": 3,
+          "x-group": "Surfaces"
+        },
+        "surface_infill_angle": {
+          "description": "Angle in degrees for top/bottom solid surface infill lines.\n\nChanging from the default can improve finish on curved or organic models.\n**Default:** 45°.",
+          "type": "number",
+          "format": "double",
+          "default": 45.0,
+          "x-group": "Surfaces"
+        },
+        "filament_diameter_mm": {
+          "description": "Filament diameter in mm.\n\nUsed to calculate extrusion volume from feed distance. Standard sizes:\n- `1.75 mm` — most common\n- `2.85 mm` — some older or larger-format printers",
+          "type": "number",
+          "format": "double",
+          "default": 1.75,
+          "x-group": "Hardware"
+        },
+        "filament_density_g_cm3": {
+          "description": "Filament density in g/cm³.\n\nUsed to convert the extruded volume into a filament **weight** for the G-code\nmetadata header. Typical values:\n- `1.24` — PLA\n- `1.27` — PETG\n- `1.04` — ABS",
+          "type": "number",
+          "format": "double",
+          "default": 1.24,
+          "x-group": "Hardware"
+        },
+        "nozzle_diameter_mm": {
+          "description": "Nozzle orifice diameter in mm.\n\nAffects minimum feature resolution and all line-width calculations.\n**Standard:** 0.4 mm. Other common sizes: 0.2, 0.6, 0.8 mm.",
+          "type": "number",
+          "format": "double",
+          "default": 0.4,
+          "x-group": "Hardware"
+        },
+        "bed_type": {
+          "description": "Build-plate surface type recorded in the G-code metadata header.\n\nFree-form label (e.g. `Textured PEI Plate`, `Cool Plate`, `Engineering Plate`).\nPurely informational: it is tracked for printer integration / diagnostics and\ndoes **not** affect slicing. Empty = omit the `; bed_type:` header line.",
+          "type": "string",
+          "default": "",
+          "x-group": "Hardware"
+        },
+        "travel_speed_mm_min": {
+          "description": "Non-print (travel) move speed in **mm/min**.\n\nConvert from mm/s by multiplying by 60. Fast travel reduces print time without affecting print quality.\n**Example:** 9000 mm/min = 150 mm/s.",
+          "type": "number",
+          "format": "double",
+          "default": 9000.0,
+          "x-group": "Speed"
+        },
+        "z_hop_mm": {
+          "description": "Z-hop lift height in mm during travel moves.\n\nLifts the nozzle before travelling to reduce stringing and nozzle drag across the print.\n**Typical:** 0.2–0.5 mm. Set to `0` to disable.",
+          "type": "number",
+          "format": "double",
+          "default": 0.2,
+          "x-group": "Retraction"
+        },
+        "retract_mm": {
+          "description": "Retraction distance in mm on travel moves.\n\nPulls filament back into the nozzle to reduce oozing and stringing.\n**Typical:** 0.5–2 mm (direct drive) or 3–7 mm (Bowden).",
+          "type": "number",
+          "format": "double",
+          "default": 1.0,
+          "x-group": "Retraction"
+        },
+        "only_one_wall_top": {
+          "description": "Use a single outer wall on the topmost layer of top surfaces.\n\nReduces the chance of pillowing and prevents infill patterns from showing through the top surface.\n**Recommended:** enabled.",
+          "type": "boolean",
+          "default": true,
+          "x-group": "Surfaces"
+        },
+        "only_one_wall_first_layer": {
+          "description": "Use a single outer wall on the first layer.\n\nImproves bed adhesion and avoids potential issues with multiple perimeters pressing against the bed simultaneously.\n**Recommended:** enabled.",
+          "type": "boolean",
+          "default": true,
+          "x-group": "Surfaces"
+        },
+        "support_threshold_angle": {
+          "description": "Overhang angle threshold in degrees (0–90) for skipping solid surface generation.\n\nSurfaces are skipped when the overhang angle is below this threshold, since shallow overhangs may not need solid fill.\n**Default:** 45°. Set to `0` to always generate surfaces.",
+          "type": "number",
+          "format": "double",
+          "default": 45.0,
+          "x-group": "Surfaces"
+        },
+        "infill_overlap_percent": {
+          "description": "Overlap of solid surfaces into perimeter walls for bonding (0.0–1.0).\n\nEnsures surfaces bond to walls without leaving gaps at the perimeter boundary.\n**Typical:** 0.25 (25% of a bead width).",
+          "type": "number",
+          "format": "double",
+          "default": 0.25,
+          "x-group": "Infill"
+        },
+        "infill_perimeter_gap_mm": {
+          "description": "Gap in mm between the innermost perimeter wall and sparse infill lines.\n\nA small gap prevents infill from pressing too hard against walls, reducing surface artefacts\nwhere the infill pattern shows through the outer wall.\n**Typical:** 0.0–0.2 mm. Set to `0.0` for no gap (infill touches the inner wall).",
+          "type": "number",
+          "format": "double",
+          "default": 0.1,
+          "x-group": "Infill"
+        },
+        "min_infill_extrusion_mm": {
+          "description": "Minimum infill line length in mm.\n\nScan-line segments shorter than this threshold are discarded instead of being\nprinted, for **both** solid top/bottom surface fill and sparse infill. Tiny\nslivers at curved or diagonal boundaries — and isolated sparse-infill dashes in\nnarrow corners — waste printhead motion (a full retract/travel/un-retract for a\nmechanically-insignificant dab) without meaningfully improving coverage;\nadjacent lines and the flanking walls fill the space naturally.\n\nSet to the nozzle diameter for best results (e.g. `0.4` for a 0.4 mm nozzle).\nSet to `0.0` to disable the filter entirely.\n**Default:** 0.4 mm (one standard nozzle diameter).",
+          "type": "number",
+          "format": "double",
+          "default": 0.4,
+          "x-group": "Surfaces"
+        },
+        "path_tolerance": {
+          "description": "Maximum perpendicular deviation (mm) for path simplification (Ramer–Douglas–Peucker).\n\nReduces the number of G-code points without visibly affecting print quality.\n**Typical:** 0.01–0.1 mm. Set to `0.0` to disable.",
+          "type": "number",
+          "format": "double",
+          "default": 0.05,
+          "x-group": "Output"
+        },
+        "gcode_flavor": {
+          "description": "G-code firmware flavor for the target printer.\n\nSupported values:\n- `marlin` — Marlin firmware (widely compatible)\n- `klipper` — Klipper firmware (macro-based)",
+          "$ref": "#/$defs/GcodeFlavor",
+          "default": "marlin",
+          "x-group": "Output"
+        },
+        "fan_configs": {
+          "description": "Fan configurations for layer-time-based adaptive cooling.\n\nEach entry describes one physical fan in the printer. For multi-fan printers\n(e.g. Bambu Lab X1C with 4 fans) add an entry per fan with the appropriate\n`fan_index` (P0–P3).\n\nFan speed is adapted to the estimated layer print time:\n- Short layers (< `layer_time_fast_s`): `max_speed`\n- Long layers (> `layer_time_slow_s`): `min_speed`\n- Between: smooth linear interpolation\n\n**Default:** single part-cooling fan (P0) at 35%–100% speed.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FanConfig"
+          },
+          "default": [
+            {
+              "fan_index": 0,
+              "min_speed": 0.35,
+              "max_speed": 1.0,
+              "layer_time_fast_s": 10.0,
+              "layer_time_slow_s": 30.0
+            }
+          ],
+          "x-group": "Cooling"
+        },
+        "mesh_quality": {
+          "description": "Optional mesh decimation applied before slicing.\n\nSupported values:\n- `normal` — no decimation (default)\n- `high-quality` — no decimation, signals maximum fidelity\n- `draft` — aggressive polygon reduction for faster slicing",
+          "$ref": "#/$defs/MeshQuality",
+          "default": "Normal",
+          "x-group": "Mesh"
+        },
+        "first_layer_height": {
+          "description": "First-layer height in mm. `0` = use `layer_height`.\n\nA thicker first layer improves bed adhesion.\n**Typical:** 0.20–0.28 mm.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Layer"
+        },
+        "line_width": {
+          "description": "Explicit extrusion line width in mm. `0` = derive from nozzle diameter.\n\nOverrides the nozzle-derived default for solid infill and surfaces.\n**Typical:** 100–120% of nozzle diameter.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Walls"
+        },
+        "outer_wall_line_width": {
+          "description": "Per-role outer-wall extrusion width in mm. `0` = derive from `line_width` / nozzle diameter.\n\nOverrides the width used for outer-wall paths and their `;TYPE:Outer wall` /\n`;WIDTH:` G-code annotations. Ignored for variable-width Arachne beads, which\ncarry their own per-segment width.\n**Typical:** 100–105% of nozzle diameter for dimensional accuracy.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Walls"
+        },
+        "inner_wall_line_width": {
+          "description": "Per-role inner-wall extrusion width in mm. `0` = derive from `line_width` / nozzle diameter.\n\nOverrides the width used for inner-wall paths and their `;TYPE:Inner wall` /\n`;WIDTH:` G-code annotations. Ignored for variable-width Arachne beads.\n**Typical:** 110–120% of nozzle diameter for faster, stronger walls.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Walls"
+        },
+        "top_surface_line_width": {
+          "description": "Per-role top/bottom solid-surface extrusion width in mm. `0` = derive from `line_width` / nozzle diameter.\n\nOverrides the width used for top and bottom surface paths and their\n`;TYPE:Top surface` / `;TYPE:Bottom surface` and `;WIDTH:` annotations.\n**Typical:** 100% of nozzle diameter for a fine finish.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Surfaces"
+        },
+        "sparse_infill_line_width": {
+          "description": "Per-role sparse-infill extrusion width in mm. `0` = derive from `line_width` / nozzle diameter.\n\nOverrides the width used for sparse-infill paths and their `;TYPE:Sparse infill`\n/ `;WIDTH:` annotations.\n**Typical:** 100–150% of nozzle diameter; wider infill prints faster.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Infill"
+        },
+        "retract_speed_mm_min": {
+          "description": "Retraction speed in **mm/min**.\n\nConvert from mm/s by multiplying by 60.\n**Example:** 2400 mm/min = 40 mm/s.",
+          "type": "number",
+          "format": "double",
+          "default": 2400.0,
+          "x-group": "Retraction"
+        },
+        "flow_ratio": {
+          "description": "Global extrusion flow multiplier (0.0–2.0).\n\nScales every extrusion volume. `1.0` = nominal. Tune per-material to correct\nunder/over-extrusion.",
+          "type": "number",
+          "format": "double",
+          "default": 1.0,
+          "x-group": "Extrusion"
+        },
+        "nozzle_temp_first_layer": {
+          "description": "First-layer nozzle temperature in °C. `0` = use `nozzle_temp`.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Temperature"
+        },
+        "bed_temp_first_layer": {
+          "description": "First-layer bed temperature in °C. `0` = use `bed_temp`.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Temperature"
+        },
+        "chamber_temp": {
+          "description": "Chamber temperature in °C for enclosed printers. `0` = no active chamber heating. Exposed to custom start G-code as `{chamber_temp}` (e.g. Klippain `START_PRINT … CHAMBER={chamber_temp}`).",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Temperature"
+        },
+        "filament_type": {
+          "description": "Material family name (e.g. `PLA`, `PETG`, `ABS`). Populated from the active filament profile at resolve time. Exposed to custom start G-code as `{filament_type}` (e.g. Klippain `START_PRINT … MATERIAL={filament_type}`).",
+          "type": "string",
+          "default": "",
+          "x-group": "Temperature"
+        },
+        "filament_name": {
+          "description": "Filament display name recorded in the G-code metadata footer as `filament_settings_id`. Populated from the active filament profile at resolve time so Moonraker / Mainsail / Fluidd, OctoPrint, and other front-ends can show which filament the file was sliced for. Empty = omit the line.",
+          "type": "string",
+          "default": "",
+          "x-group": "Temperature"
+        },
+        "filament_color": {
+          "description": "Filament colour (hex string, e.g. `#E0730F`) recorded in the G-code metadata footer as `filament_colour`. Populated from the active filament profile at resolve time so printer front-ends can render a swatch for the file. Empty = omit the line.",
+          "type": "string",
+          "default": "",
+          "x-group": "Temperature"
+        },
+        "pressure_advance": {
+          "description": "Linear/pressure advance factor (Klipper `SET_PRESSURE_ADVANCE`, Marlin `M900 K`).\n\n`0` disables. Compensates for pressure lag at corners.\n**Typical:** 0.02–0.08.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Extrusion"
+        },
+        "acceleration": {
+          "description": "Print acceleration for normal moves in mm/s². `0` disables acceleration control.\n\nWhen set, the slicer emits a firmware acceleration command whenever the target\nchanges (Klipper `SET_VELOCITY_LIMIT ACCEL=…`, Marlin `M204 P…`). Lower values\nsmooth motion and reduce ringing; higher values print faster.\n**Typical:** 3000–10000.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Speed"
+        },
+        "first_layer_acceleration": {
+          "description": "First-layer acceleration in mm/s². `0` = use `acceleration`.\n\nA lower first-layer acceleration improves bed adhesion by giving the nozzle more\ndwell time. Applies to every role on the first layer.\n**Typical:** 1000–3000.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Speed"
+        },
+        "top_surface_acceleration": {
+          "description": "Top-surface acceleration in mm/s². `0` = use `acceleration`.\n\nSolid top surfaces benefit from a distinct (often higher) acceleration for a\nsmoother finish. Applies to top-surface solid infill.\n**Typical:** 5000–10000.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Speed"
+        },
+        "outer_wall_acceleration": {
+          "description": "Outer-wall acceleration in mm/s². `0` = use `acceleration`.\n\nThe outermost perimeter defines the visible surface; a lower, dedicated\nacceleration reduces ringing and ghosting on external walls.\n**Typical:** 2000–6000.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Speed"
+        },
+        "bridge_acceleration": {
+          "description": "Bridge / overhang acceleration in mm/s². `0` = use `acceleration`.\n\nStrands printed into air (bridge infill and overhang perimeters) cool and sag\nwithout support below; a low acceleration keeps flow steady and lets each strand\ntension before the nozzle moves on.\n**Typical:** 1000–3000.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Speed"
+        },
+        "disable_fan_first_layers": {
+          "description": "Number of initial layers with the part-cooling fan forced off.\n\nImproves adhesion of the first few layers.\n**Typical:** 1.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0,
+          "default": 1,
+          "x-group": "Cooling"
+        },
+        "max_volumetric_speed": {
+          "description": "Maximum volumetric extrusion rate in mm³/s. `0` = unlimited.\n\nCaps print speed so the hotend can keep up with the flow.\n**Typical:** 8–24 mm³/s depending on material and hotend.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Extrusion"
+        },
+        "extruder_count": {
+          "description": "Number of extruders (tools) on the machine. Multi-material is not yet supported.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0,
+          "default": 1,
+          "x-group": "Hardware"
+        },
+        "support_enabled": {
+          "description": "Whether support structures are generated.",
+          "type": "boolean",
+          "default": false,
+          "x-group": "Support"
+        },
+        "support_type": {
+          "description": "Support style: `normal` (grid) or `tree` (organic). Generation pending.",
+          "$ref": "#/$defs/SupportType",
+          "default": "normal",
+          "x-group": "Support",
+          "x-relevant-when": {
+            "field": "support_enabled",
+            "equals": true
+          }
+        },
+        "support_density": {
+          "description": "Support infill density as a fraction (0.0–1.0). Generation pending.",
+          "type": "number",
+          "format": "double",
+          "default": 0.15,
+          "x-group": "Support",
+          "x-relevant-when": {
+            "field": "support_enabled",
+            "equals": true
+          }
+        },
+        "adhesion_type": {
+          "description": "Bed-adhesion helper: `none`, `skirt`, `brim`, or `raft`.",
+          "$ref": "#/$defs/AdhesionType",
+          "default": "none",
+          "x-group": "Adhesion"
+        },
+        "brim_width": {
+          "description": "Brim width in mm (when `adhesion_type = brim`).",
+          "type": "number",
+          "format": "double",
+          "default": 5.0,
+          "x-group": "Adhesion",
+          "x-relevant-when": {
+            "field": "adhesion_type",
+            "equals": "brim"
+          }
+        },
+        "brim_type": {
+          "description": "Where brim material is placed: `outer_only`, `inner_only`, `outer_and_inner`, or `ears`.",
+          "$ref": "#/$defs/BrimType",
+          "default": "outer_only",
+          "x-group": "Adhesion",
+          "x-relevant-when": {
+            "field": "adhesion_type",
+            "equals": "brim"
+          }
+        },
+        "brim_separation": {
+          "description": "Gap in mm between the brim and the object's first-layer contour (a.k.a. brim separation / offset). `0` fuses the brim directly onto the wall.",
+          "type": "number",
+          "format": "double",
+          "default": 0.0,
+          "x-group": "Adhesion",
+          "x-relevant-when": {
+            "field": "adhesion_type",
+            "equals": "brim"
+          }
+        },
+        "skirt_loops": {
+          "description": "Number of skirt loops (when `adhesion_type = skirt`).",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0,
+          "default": 1,
+          "x-group": "Adhesion",
+          "x-relevant-when": {
+            "field": "adhesion_type",
+            "equals": "skirt"
+          }
+        },
+        "skirt_distance": {
+          "description": "Gap in mm between the object and the innermost skirt loop.",
+          "type": "number",
+          "format": "double",
+          "default": 2.0,
+          "x-group": "Adhesion",
+          "x-relevant-when": {
+            "field": "adhesion_type",
+            "equals": "skirt"
+          }
+        },
+        "skirt_height": {
+          "description": "Number of layers the skirt spans (≥1). Values >1 act as a draft shield around the print.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0,
+          "default": 1,
+          "x-group": "Adhesion",
+          "x-relevant-when": {
+            "field": "adhesion_type",
+            "equals": "skirt"
+          }
+        },
+        "raft_layers": {
+          "description": "Raft layer count: sacrificial base + interface layers printed under the object (when `adhesion_type = raft`, or any value >0).",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0,
+          "default": 0,
+          "x-group": "Adhesion",
+          "x-relevant-when": {
+            "field": "adhesion_type",
+            "equals": "raft"
+          }
+        },
+        "raft_air_gap": {
+          "description": "Vertical air gap in mm between the top of the raft and the object's first layer (eases raft removal).",
+          "type": "number",
+          "format": "double",
+          "default": 0.1,
+          "x-group": "Adhesion",
+          "x-relevant-when": {
+            "field": "adhesion_type",
+            "equals": "raft"
+          }
+        },
+        "ironing_enabled": {
+          "description": "Iron top surfaces for a smoother finish. Ironing pass pending.",
+          "type": "boolean",
+          "default": false,
+          "x-group": "Surfaces"
+        },
+        "start_gcode": {
+          "description": "Custom start G-code block, inserted before the first print move. `null` = flavor default.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "x-group": "Output"
+        },
+        "end_gcode": {
+          "description": "Custom end G-code block, inserted after the last print move. `null` = flavor default.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "x-group": "Output"
+        },
+        "layer_gcode": {
+          "description": "Custom G-code block inserted at every layer change, after the Z move. Supports `{z}`, `{height}`, and `{layer_num}` (1-based) placeholders. `null` = none.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "x-group": "Output"
+        },
+        "thumbnail_enabled": {
+          "description": "Embed a PNG thumbnail comment block in generated G-code files. The UI renders it from a fixed camera angle and theme (see `thumbnail_view` / `thumbnail_theme`) when slicing.",
+          "type": "boolean",
+          "default": true,
+          "x-group": "Thumbnail"
+        },
+        "thumbnail_size_px": {
+          "description": "Square thumbnail resolution in pixels — this is the thumbnail's quality knob.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 320,
+          "x-group": "Thumbnail",
+          "x-relevant-when": {
+            "field": "thumbnail_enabled",
+            "equals": true
+          }
+        },
+        "thumbnail_view": {
+          "description": "Fixed camera angle used to render the embedded thumbnail (not the live view).",
+          "$ref": "#/$defs/ThumbnailView",
+          "default": "isometric",
+          "x-group": "Thumbnail",
+          "x-relevant-when": {
+            "field": "thumbnail_enabled",
+            "equals": true
+          }
+        },
+        "thumbnail_theme": {
+          "description": "Fixed colour scheme for the embedded thumbnail — independent of the app/OS theme.",
+          "$ref": "#/$defs/ThumbnailTheme",
+          "default": "transparent",
+          "x-group": "Thumbnail",
+          "x-relevant-when": {
+            "field": "thumbnail_enabled",
+            "equals": true
+          }
+        },
+        "thumbnail_color_mode": {
+          "description": "How the model is coloured in the thumbnail: a neutral grey, the active filament's colour, or a specific colour you choose.",
+          "$ref": "#/$defs/ThumbnailColorMode",
+          "default": "filament",
+          "x-group": "Thumbnail",
+          "x-relevant-when": {
+            "field": "thumbnail_enabled",
+            "equals": true
+          }
+        },
+        "thumbnail_custom_color": {
+          "description": "Specific model colour (`#rrggbb`) used when the thumbnail colour mode is `custom`.",
+          "type": "string",
+          "default": "#e0912f",
+          "x-group": "Thumbnail",
+          "x-relevant-when": {
+            "field": "thumbnail_color_mode",
+            "equals": "custom"
+          }
+        }
+      }
+    },
+    "WallGenerator": {
+      "description": "Which wall (perimeter) generation algorithm to use.\n\nMirrors the \"Wall generator\" choice offered by PrusaSlicer / OrcaSlicer /\nBambu Studio: a robust classic offset generator, or the Arachne\nvariable-width generator.",
+      "oneOf": [
+        {
+          "description": "Classic fixed-width concentric perimeters with thin-wall gap fill.\n\nDeterministic, fast, and dependency-free.  Produces `wall_count`\nconstant-width beads per shell plus a variable-width residual bead in\nany narrow space that remains.  Matches the approach the mature slicers\nship as their \"Classic\" wall generator.",
+          "type": "string",
+          "const": "classic"
+        },
+        {
+          "description": "Arachne-style medial-axis variable-width walls.\n\nConcentric perimeter loops whose count adapts to the local wall\nthickness, plus variable-width beads that follow the medial axis to fill\nthin features (engraved text, tapering ribs) a fixed-width perimeter\ncannot.  Based on the medial-axis approach of Kuipers et al. (2020) used\nby CuraEngine / PrusaSlicer / OrcaSlicer.  This is the default.",
+          "type": "string",
+          "const": "arachne"
+        }
+      ]
+    },
+    "SeamPosition": {
+      "description": "Where to place the start/end point (\"seam\") of each closed perimeter loop.\n\nClosed loops are cyclic and may begin at any vertex; the chosen vertex\nbecomes the visible blob/seam where extrusion starts and ends.  Different\npolicies trade off visual quality against travel distance.\n\nMirrors the seam options offered by PrusaSlicer / OrcaSlicer / Bambu Studio\nso users can transfer their preferences.",
+      "oneOf": [
+        {
+          "description": "Pick the loop vertex closest to the nozzle's current position.\n\nMinimises travel and therefore print time, but seams scatter randomly\nacross the surface.  Good for prototypes and infill-heavy parts.",
+          "type": "string",
+          "const": "nearest"
+        },
+        {
+          "description": "Place the seam at the vertex with the largest Y coordinate (rear of\nthe build plate).  Deterministic per-loop, gives a single visible\nseam line on the back of the model — a common default for display\npieces like the Benchy.",
+          "type": "string",
+          "const": "rear"
+        },
+        {
+          "description": "Place the seam at the vertex closest to a fixed XY direction\n(default: rear-aligned).  Like `Rear` but consistent across layers\neven when the loop's bounding box shifts.",
+          "type": "string",
+          "const": "aligned"
+        },
+        {
+          "description": "Place the seam at the vertex with the sharpest convex corner.\n\nHides the blob in a corner where it is geometrically expected and\nleast visible.  Falls back to `Nearest` for smooth (cornerless) loops.",
+          "type": "string",
+          "const": "sharpest_corner"
+        },
+        {
+          "description": "Pick a different random vertex for every loop.\n\nSpreads seam blobs evenly so no single line is visible — useful for\norganic or cylindrical parts where a single seam line would stand\nout.  Deterministic per-loop given a seed (uses path geometry hash).",
+          "type": "string",
+          "const": "random"
+        }
+      ]
+    },
+    "InfillPattern": {
+      "description": "Supported infill patterns.",
+      "oneOf": [
+        {
+          "description": "Parallel lines alternating direction per layer (default, fastest).",
+          "type": "string",
+          "const": "Rectilinear"
+        },
+        {
+          "description": "Perpendicular lines forming a grid pattern (stronger).",
+          "type": "string",
+          "const": "Grid"
+        },
+        {
+          "description": "Hexagonal cells (good strength-to-weight ratio).",
+          "type": "string",
+          "const": "Honeycomb"
+        },
+        {
+          "description": "3D mathematical pattern (experimental, best strength).",
+          "type": "string",
+          "const": "Gyroid"
+        },
+        {
+          "description": "Triply Periodic Minimal Surface - Diamond (organic, isotropic structure).",
+          "type": "string",
+          "const": "TpmsD"
+        }
+      ]
+    },
+    "GcodeFlavor": {
+      "description": "Supported G-code firmware flavors.\n\nEach variant selects the concrete [`crate::gcode::GcodeDialect`] used by\n[`crate::gcode::GcodeGenerator`].  Only **Marlin** and **Klipper** are\nfirst-class citizens; additional flavors will be added in future releases.",
+      "oneOf": [
+        {
+          "description": "Marlin firmware: standard M-command set, widely compatible with consumer FDM printers.",
+          "type": "string",
+          "const": "marlin"
+        },
+        {
+          "description": "Klipper firmware: supports `SET_VELOCITY_LIMIT`, `SET_PRESSURE_ADVANCE`, and custom macros.",
+          "type": "string",
+          "const": "klipper"
+        }
+      ]
+    },
+    "FanConfig": {
+      "description": "Configuration for a single fan in a multi-fan printer system.\n\nFan speed is automatically adapted to the estimated layer print time:\nfast layers (small features) get maximum cooling; slow layers get minimum.\n\nFor auxiliary fans (RSCS and similar systems) set `aux_overrides` to enable\nbounded boost triggers and rate limiting on top of the baseline curve.\n\n# Layer-time thresholds\n```text\nlayer_time ≤ layer_time_fast_s  →  speed = max_speed\nlayer_time ≥ layer_time_slow_s  →  speed = min_speed\nbetween                         →  linear interpolation\n```",
+      "type": "object",
+      "properties": {
+        "fan_index": {
+          "description": "Fan index (P parameter in M106). 0=part-cooling, 1=hotend, 2=chamber, 3=aux.",
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "klipper_name": {
+          "description": "Optional Klipper fan object name override (e.g. 'rscs', 'side_blast'). Overrides the default name derived from fan_index.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "min_speed": {
+          "description": "Minimum fan speed fraction (0.0–1.0) for slow/large layers.",
+          "type": "number",
+          "format": "double"
+        },
+        "max_speed": {
+          "description": "Maximum fan speed fraction (0.0–1.0) for fast/small layers.",
+          "type": "number",
+          "format": "double"
+        },
+        "layer_time_fast_s": {
+          "description": "Layer time (seconds) at or below which max_speed is used.",
+          "type": "number",
+          "format": "double"
+        },
+        "layer_time_slow_s": {
+          "description": "Layer time (seconds) at or above which min_speed is used.",
+          "type": "number",
+          "format": "double"
+        },
+        "aux_overrides": {
+          "description": "Optional auxiliary fan boost and safety overrides. Enables RSCS-style hybrid cooling with bridge boost, short-layer boost, speed scaling, material safety cap, and rate limiting.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AuxFanOverrides"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "fan_index",
+        "min_speed",
+        "max_speed",
+        "layer_time_fast_s",
+        "layer_time_slow_s"
+      ]
+    },
+    "AuxFanOverrides": {
+      "description": "Bounded override settings for auxiliary cooling fans (e.g. RSCS).\n\nAux fans operate in *hybrid* mode: a baseline speed is computed from the\nnormal adaptive cooling curve, then constrained triggers can temporarily\nraise it for bridges or short layers.  Several safety bounds prevent\nover-cooling sensitive materials or creating thermal shock from abrupt\nspeed changes.\n\n# Computation order\n```text\n1. base       ← speed_for_layer_time(layer_time)\n2. boost      ← bridge_boost (if bridging) + short_layer_boost (if short layer)\n3. boosted    ← min(base + boost, boost_max_speed)\n4. scaled     ← boosted × speed_scale\n5. capped     ← min(scaled, max_speed_limit)\n6. rate-limited ← clamp(capped, prev − max_speed_change_per_layer, prev + …)\n```",
+      "type": "object",
+      "properties": {
+        "bridge_boost": {
+          "description": "Additional fan speed fraction (0.0–1.0) added when printing bridges.",
+          "type": "number",
+          "format": "double"
+        },
+        "short_layer_boost": {
+          "description": "Additional fan speed fraction (0.0–1.0) added on very short layers.",
+          "type": "number",
+          "format": "double"
+        },
+        "boost_max_speed": {
+          "description": "Maximum fan speed fraction (0.0–1.0) after applying all boosts.",
+          "type": "number",
+          "format": "double"
+        },
+        "speed_scale": {
+          "description": "Multiplier applied to the final speed (e.g. 0.8 = 80%).",
+          "type": "number",
+          "format": "double"
+        },
+        "max_speed_limit": {
+          "description": "Hard maximum speed fraction (0.0–1.0) for material safety.",
+          "type": "number",
+          "format": "double"
+        },
+        "max_speed_change_per_layer": {
+          "description": "Maximum speed change per layer (0.0–1.0) to prevent thermal shock.",
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "required": [
+        "bridge_boost",
+        "short_layer_boost",
+        "boost_max_speed",
+        "speed_scale",
+        "max_speed_limit",
+        "max_speed_change_per_layer"
+      ]
+    },
+    "MeshQuality": {
+      "description": "Controls optional mesh decimation applied before slicing.\n\nDecimation reduces the triangle count of the input mesh as a preprocessing\nstep. Fewer triangles speed up all subsequent slicing operations; the\ntrade-off is reduced geometric accuracy on very fine surface details.\n\nThe original mesh is never modified; only the copy handed to the slicing\npipeline is decimated.",
+      "oneOf": [
+        {
+          "description": "No decimation. Full input mesh is used for slicing (default).",
+          "type": "string",
+          "const": "Normal"
+        },
+        {
+          "description": "No decimation. Identical to `normal` in behaviour; signals that the\ncaller wants maximum geometric fidelity.",
+          "type": "string",
+          "const": "HighQuality"
+        },
+        {
+          "description": "Aggressive polygon reduction via vertex clustering.\n\nSignificantly reduces triangle count for faster slicing of\nhigh-density models. Fine surface details may be smoothed away.",
+          "type": "string",
+          "const": "Draft"
+        }
+      ]
+    },
+    "SupportType": {
+      "description": "Support-structure style.\n\nOnly `support_threshold_angle` is honoured by the pipeline today; the\n`normal`/`tree` distinction and `support_density` are carried through the\nparameter set so profiles can express intent, but the generator that acts\non them is not yet implemented.  See `TODO(profiles): supports`.",
+      "oneOf": [
+        {
+          "description": "Classic vertical / grid supports.",
+          "type": "string",
+          "const": "normal"
+        },
+        {
+          "description": "Organic tree supports (branching columns).",
+          "type": "string",
+          "const": "tree"
+        }
+      ]
+    },
+    "AdhesionType": {
+      "description": "First-layer bed-adhesion helper.\n\nDrives skirt / brim / raft generation in [`crate::adhesion`].\n\nThe enum default is [`None`](Self::None): a bare\n[`SlicingParams::default()`](crate::settings::params::SlicingParams) slice\nproduces only the object, with no adhesion geometry. Product intent (a skirt\non the standard PLA profile) is expressed by the process profiles in\n[`crate::profiles::defaults`], which set `adhesion_type` explicitly, not by\nthis struct default.",
+      "oneOf": [
+        {
+          "description": "No adhesion helper.",
+          "type": "string",
+          "const": "none"
+        },
+        {
+          "description": "A loop of filament traced around the object (priming / draft shield).",
+          "type": "string",
+          "const": "skirt"
+        },
+        {
+          "description": "A flat apron fused to the object's first layer for extra bed grip.",
+          "type": "string",
+          "const": "brim"
+        },
+        {
+          "description": "A full sacrificial base printed under the object.",
+          "type": "string",
+          "const": "raft"
+        }
+      ]
+    },
+    "BrimType": {
+      "description": "Where brim material is placed relative to the object footprint.\n\nConsumed by [`crate::adhesion`] when `adhesion_type = brim`.",
+      "oneOf": [
+        {
+          "description": "Loops around the outer contour of every island (the common case).",
+          "type": "string",
+          "const": "outer_only"
+        },
+        {
+          "description": "Loops inside every hole / concavity only (frees the outer edge, e.g.\nwhen the outside must stay dimensionally clean).",
+          "type": "string",
+          "const": "inner_only"
+        },
+        {
+          "description": "Both outer contours and holes get brim loops.",
+          "type": "string",
+          "const": "outer_and_inner"
+        },
+        {
+          "description": "Small brim discs (\"mouse ears\") stamped only at sharp convex corners —\nminimal material where warping actually starts.",
+          "type": "string",
+          "const": "ears"
+        }
+      ]
+    },
+    "ThumbnailView": {
+      "description": "Camera angle used when the UI renders the embedded G-code thumbnail.\n\nThe thumbnail is produced from a fixed, repeatable viewpoint (not the\nuser's live camera) so every slice yields a comparable preview. Angles are\nexpressed in the scene's world Z-up frame.",
+      "oneOf": [
+        {
+          "description": "Three-quarter isometric from the front-right, slightly above — the\nclassic \"hero\" product shot. Shows depth and the top face at once.",
+          "type": "string",
+          "const": "isometric"
+        },
+        {
+          "description": "Straight-on from the front (−Y), a hair above the horizon.",
+          "type": "string",
+          "const": "front"
+        },
+        {
+          "description": "Straight-on from the back (+Y).",
+          "type": "string",
+          "const": "rear"
+        },
+        {
+          "description": "From the model's left (−X).",
+          "type": "string",
+          "const": "left"
+        },
+        {
+          "description": "From the model's right (+X).",
+          "type": "string",
+          "const": "right"
+        },
+        {
+          "description": "Top-down plan view (+Z looking down).",
+          "type": "string",
+          "const": "top"
+        }
+      ]
+    },
+    "ThumbnailTheme": {
+      "description": "Colour scheme used when the UI renders the embedded G-code thumbnail.\n\nFixed per the setting — deliberately independent of the operating-system or\napplication theme so the embedded preview is deterministic. Model colouring\n(filament colour vs. neutral grey) still follows the viewer's own toggle.",
+      "oneOf": [
+        {
+          "description": "Light studio background.",
+          "type": "string",
+          "const": "light"
+        },
+        {
+          "description": "Dark studio background.",
+          "type": "string",
+          "const": "dark"
+        },
+        {
+          "description": "No background — a transparent PNG cutout of the model (default).",
+          "type": "string",
+          "const": "transparent"
+        }
+      ]
+    },
+    "ThumbnailColorMode": {
+      "description": "How the model is coloured in the embedded thumbnail.",
+      "oneOf": [
+        {
+          "description": "Neutral grey \"grey plastic\" look, tuned to the thumbnail theme.",
+          "type": "string",
+          "const": "generic"
+        },
+        {
+          "description": "Use the active filament's colour (default) — matches the viewer.",
+          "type": "string",
+          "const": "filament"
+        },
+        {
+          "description": "Use a specific colour picked in `thumbnail_custom_color`.",
+          "type": "string",
+          "const": "custom"
+        }
+      ]
+    }
+  }
+}
