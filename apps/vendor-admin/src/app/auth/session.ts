@@ -49,11 +49,19 @@ export class SessionStore {
       render: (opts: unknown) => void;
     };
     host.replaceChildren(el);
+    // Pin the discovery redirect to this app's /vendor/ URL so it matches the
+    // URL registered in the Stytch dashboard (Discovery redirect type).
+    const redirectURL = `${globalThis.location.origin}/vendor/`;
     el.render({
       client: this.stytch,
       config: {
+        authFlowType: 'Discovery',
         products: [B2BProducts.emailMagicLinks, B2BProducts.oauth],
-        oauthOptions: { providers: [{ type: 'github' }, { type: 'google' }] },
+        oauthOptions: {
+          providers: [{ type: 'github' }, { type: 'google' }],
+          discoveryRedirectURL: redirectURL,
+        },
+        emailMagicLinksOptions: { discoveryRedirectURL: redirectURL },
         sessionOptions: { sessionDurationMinutes: 60 },
       },
     });
