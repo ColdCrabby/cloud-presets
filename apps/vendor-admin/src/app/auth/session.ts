@@ -1,5 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { createStytchB2BClient, StytchB2B, B2BProducts } from '@stytch/vanilla-js/b2b';
+import { StytchUIClient, mountLogin, Products } from '@stytch/vanilla-js';
 import { setCloudPresetsAuthTokenProvider } from '@cloud-presets/api-client';
 import { environment } from '../../environments/environment';
 
@@ -12,16 +12,16 @@ export interface Member {
 /**
  * Session seam for the vendor-admin app.
  *
- * When a real Stytch B2B public token is configured it drives the prebuilt
- * `StytchB2B` login element (OAuth + email magic link, discovery flow) and,
- * once a session JWT exists, calls the API's `/v1/me` to resolve the member.
- * With no token configured it falls back to a stub so the UI still runs.
+ * When a real Stytch public token is configured it drives the prebuilt Consumer
+ * login UI (email magic link + OAuth) and, once a session JWT exists, calls the
+ * API's `/v1/me` to resolve the caller. With no token configured it falls back
+ * to a stub so the UI still runs.
  */
 @Injectable({ providedIn: 'root' })
 export class SessionStore {
   private readonly _member = signal<Member | null>(null);
   private sessionJwt: string | null = null;
-  private stytch: ReturnType<typeof createStytchB2BClient> | null = null;
+  private stytch: StytchUIClient | null = null;
 
   readonly member = this._member.asReadonly();
   readonly isAuthenticated = computed(() => this._member() !== null);
@@ -31,37 +31,37 @@ export class SessionStore {
     setCloudPresetsAuthTokenProvider(() => this.sessionJwt);
 
     if (this.usesStytch) {
-      this.stytch = createStytchB2BClient(environment.stytchPublicToken);
-      if (!customElements.get('stytch-b2b')) {
-        customElements.define('stytch-b2b', StytchB2B);
-      }
+      this.stytch = new StytchUIClient(environment.stytchPublicToken);
       this.stytch.session.onChange(() => void this.syncFromStytch());
       void this.syncFromStytch();
     }
   }
 
-  /** Mount the Stytch login element into host. No-op in stub mode. */
+  /** Mount the Stytch login UI into host. No-op in stub mode. */
   mountLogin(host: HTMLElement): void {
     if (!this.stytch) {
       return;
     }
-    const el = document.createElement('stytch-b2b') as HTMLElement & {
-      render: (opts: unknown) => void;
-    };
-    host.replaceChildren(el);
-    // Pin the discovery redirect to this app's /vendor/ URL so it matches the
-    // URL registered in the Stytch dashboard (Discovery redirect type).
+    if (!host.id) {
+      host.id = 'stytch-login';
+    }
+    // Consumer login uses the Login/Sign-up redirect URLs registered in the
+    // Stytch dashboard — no Discovery type needed.
     const redirectURL = `${globalThis.location.origin}/vendor/`;
-    el.render({
+    mountLogin({
       client: this.stytch,
+      elementId: `#${host.id}`,
       config: {
-        authFlowType: 'Discovery',
-        products: [B2BProducts.emailMagicLinks, B2BProducts.oauth],
-        oauthOptions: {
-          providers: [{ type: 'github' }, { type: 'google' }],
-          discoveryRedirectURL: redirectURL,
+        products: [Products.emailMagicLinks, Products.oauth],
+        emailMagicLinksOptions: {
+          loginRedirectURL: redirectURL,
+          signupRedirectURL: redirectURL,
         },
-        emailMagicLinksOptions: { discoveryRedirectURL: redirectURL },
+        oauthOptions: {
+          providers: [{ type: 'google' }, { type: 'github' }],
+          loginRedirectURL: redirectURL,
+          signupRedirectURL: redirectURL,
+        },
         sessionOptions: { sessionDurationMinutes: 60 },
       },
     });
@@ -71,8 +71,8 @@ export class SessionStore {
   signIn(): void {
     this._member.set({
       memberId: 'member-stub',
-      organizationSlug: 'prusa-research',
-      roles: ['stytch_member'],
+      organizationSlug: 'demo',
+      roles: [],
     });
   }
 

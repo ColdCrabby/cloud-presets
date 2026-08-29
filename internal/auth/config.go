@@ -104,7 +104,7 @@ func (c Config) withDefaults() (Config, error) {
 		c.Audience = c.ProjectID
 	}
 	if c.JWKSURL == "" {
-		c.JWKSURL = fmt.Sprintf("%s/v1/b2b/sessions/jwks/%s", stytchDefaultJWKSHost, c.ProjectID)
+		c.JWKSURL = fmt.Sprintf("%s/v1/sessions/jwks/%s", stytchDefaultJWKSHost, c.ProjectID)
 	}
 	if c.MaxTokenAge <= 0 {
 		c.MaxTokenAge = defaultMaxTokenAge
