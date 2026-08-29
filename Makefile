@@ -4,7 +4,7 @@ GO ?= go
 PNPM ?= pnpm
 OPENAPI_OUT ?= openapi.yaml
 
-.PHONY: build run test vet tidy openapi
+.PHONY: build run dev test vet tidy openapi
 
 ## build: compile the Go API and build both Angular apps.
 build:
@@ -12,8 +12,12 @@ build:
 	$(PNPM) install --frozen-lockfile
 	$(PNPM) build
 
-## run: start the Go API and both Angular dev servers together.
+## run: start the Go API only (binds $PORT, else :8080).
 run:
+	$(GO) run ./cmd/server
+
+## dev: start the Go API and both Angular dev servers together.
+dev:
 	$(GO) run ./cmd/server & \
 	$(PNPM) start:public & \
 	$(PNPM) start:vendor-admin & \
