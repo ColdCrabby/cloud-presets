@@ -55,6 +55,7 @@ invisible build-time difference. Do not edit generated files by hand; run
 `pnpm gen:client` instead.
 
 `openapi/openapi.json` is currently a **stub** derived from
-[`docs/api-surface.md`](./api-surface.md). Once the API skeleton (issue #3)
-exports its Huma-generated spec, replace this file with that export and rerun
-`pnpm gen:client`.
+[`docs/api-surface.md`](./api-surface.md). The real Go API only serves
+`/v1/health` so far (the root `openapi.yaml`); once the remaining endpoints in
+`docs/api-surface.md` are implemented, replace this file with that export and
+rerun `pnpm gen:client`.

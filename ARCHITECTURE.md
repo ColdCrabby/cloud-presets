@@ -96,20 +96,29 @@ rather than a cross-repo dance.
 
 ```
 cloud-presets/
-├── cmd/                  # entrypoints (API server, preset validator CLI)
+├── cmd/                  # entrypoints (API server, OpenAPI export, preset validator CLI)
 ├── internal/
 │   ├── catalog/          # in-memory catalog + atomic swap
-│   ├── ingest/           # git fetch, parse, validate
-│   ├── search/           # fuzzy index
+│   ├── ingest/           # git fetch, parse, validate (not yet implemented)
+│   ├── search/           # fuzzy index (not yet implemented)
 │   ├── api/              # Huma operations, DTOs
-│   ├── auth/             # Stytch JWT verification, authorization
-│   └── github/           # GitHub App client, PR creation
+│   ├── auth/             # Stytch JWT verification (ownership authorization not yet implemented)
+│   └── github/           # GitHub App client, PR creation (not yet implemented)
 ├── schemas/              # vendored from ColdCrabby/slicer
+├── openapi.yaml          # OpenAPI 3.1 doc exported from the Go API
 ├── apps/
 │   ├── public/           # Angular: browse & search
 │   └── vendor-admin/     # Angular: authenticated vendor management
+├── packages/
+│   ├── ui/               # shared Angular UI primitives
+│   └── api-client/       # OpenAPI client generated for both apps
+├── openapi/              # spec the frontend client is currently generated from (see docs/frontends.md)
+├── tools/stub-api/       # dependency-free stand-in for the Go API, for frontend dev
 └── docs/
 ```
+
+See [docs/frontends.md](./docs/frontends.md) for why the frontend client is
+generated from `openapi/` rather than the root `openapi.yaml` for now.
 
 `schemas/` is a **vendored copy, not a submodule** — pinned, reviewable, and
 updated by an explicit PR so a schema bump is a visible, deliberate act.
