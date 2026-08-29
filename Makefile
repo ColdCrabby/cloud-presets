@@ -12,7 +12,7 @@ build:
 	$(PNPM) install --frozen-lockfile
 	$(PNPM) build
 
-## run: start the Go API only (binds $PORT, else :8080).
+## run: serve the Go API and both built frontends from one server (binds $PORT).
 run:
 	$(GO) run ./cmd/server
 

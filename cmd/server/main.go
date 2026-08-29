@@ -12,6 +12,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ColdCrabby/cloud-presets/internal/api"
@@ -21,6 +23,12 @@ import (
 
 // defaultPresetsRepository is the repository the bot proposes changes to.
 const defaultPresetsRepository = "ColdCrabby/presets"
+
+// Default locations of the built Angular apps, overridable via env.
+const (
+	defaultPublicDir = "apps/public/dist/public/browser"
+	defaultAdminDir  = "apps/vendor-admin/dist/vendor-admin/browser"
+)
 
 // installationCheckTimeout bounds the startup preflight so an unreachable or
 // slow GitHub cannot hold the server off its listener.
@@ -45,12 +53,69 @@ func main() {
 	}
 
 	holder := catalog.NewHolder()
-	_, handler := api.New(holder)
+	_, apiHandler := api.New(holder)
+
+	handler := withFrontends(apiHandler)
 
 	log.Printf("preset cloud API listening on %s (catalog not ready until first ingest)", addr)
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatalf("server stopped: %v", err)
 	}
+}
+
+// withFrontends mounts the API under /v1 and serves the two built Angular apps:
+// the public app at / and the vendor-admin app at /admin/. Missing build dirs
+// are skipped so the API still serves on its own.
+func withFrontends(apiHandler http.Handler) http.Handler {
+	publicDir := envOr("PUBLIC_DIR", defaultPublicDir)
+	adminDir := envOr("ADMIN_DIR", defaultAdminDir)
+
+	mux := http.NewServeMux()
+	mux.Handle(api.BasePath+"/", apiHandler)
+
+	if dirHasIndex(adminDir) {
+		mux.Handle("/admin/", spaHandler{root: adminDir, prefix: "/admin/"})
+	} else {
+		log.Printf("frontends: admin build not found at %s, /admin disabled", adminDir)
+	}
+
+	if dirHasIndex(publicDir) {
+		mux.Handle("/", spaHandler{root: publicDir, prefix: "/"})
+	} else {
+		log.Printf("frontends: public build not found at %s, / disabled", publicDir)
+	}
+
+	return mux
+}
+
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func dirHasIndex(dir string) bool {
+	info, err := os.Stat(filepath.Join(dir, "index.html"))
+	return err == nil && !info.IsDir()
+}
+
+// spaHandler serves static files from root, falling back to index.html so the
+// Angular client-side router can handle unknown paths.
+type spaHandler struct {
+	root   string
+	prefix string
+}
+
+func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	rel := strings.TrimPrefix(r.URL.Path, h.prefix)
+	// filepath.Join cleans the path, so ".." segments cannot escape root.
+	file := filepath.Join(h.root, filepath.FromSlash(rel))
+	if info, err := os.Stat(file); err == nil && !info.IsDir() {
+		http.ServeFile(w, r, file)
+		return
+	}
+	http.ServeFile(w, r, filepath.Join(h.root, "index.html"))
 }
 
 // newGitHubClient builds the bot client from the environment, which the deploy
