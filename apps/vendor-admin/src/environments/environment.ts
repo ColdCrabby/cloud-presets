@@ -1,11 +1,12 @@
 /**
- * Runtime configuration for the vendor-admin app. `apiBaseUrl` is same-origin,
- * so requests reach the Go API that serves this app. Set `stytchPublicToken` to
- * a real Stytch B2B public token (`public-token-...`) to enable sign-in; left
- * empty, the app uses a stub session.
+ * Development configuration for the vendor-admin app. `apiBaseUrl` is
+ * same-origin so requests reach the Go API serving this app. With an empty
+ * `stytchPublicToken` the app uses a stub session. Production builds replace
+ * this file with environment.prod.ts (see angular.json fileReplacements),
+ * generated from STYTCH_PUBLIC_TOKEN by scripts/inject-stytch.mjs.
  */
 export const environment = {
   production: false,
   apiBaseUrl: '',
-  stytchPublicToken: 'public-token-live-53900e45-9f63-49ac-92f9-c7a73af2af18',
+  stytchPublicToken: '',
 };
