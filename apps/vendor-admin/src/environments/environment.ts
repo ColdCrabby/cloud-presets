@@ -7,5 +7,5 @@
 export const environment = {
   production: false,
   apiBaseUrl: '',
-  stytchPublicToken: 'public-token-placeholder',
+  stytchPublicToken: 'public-token-live-53900e45-9f63-49ac-92f9-c7a73af2af18',
 };
