@@ -8,7 +8,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -75,7 +77,13 @@ func withFrontends(apiHandler http.Handler) http.Handler {
 	mux.Handle(api.BasePath+"/", apiHandler)
 
 	if dirHasIndex(vendorDir) {
-		mux.Handle("/vendor/", spaHandler{root: vendorDir, prefix: "/vendor/"})
+		// The public token is injected into index.html at serve time, so the
+		// token is a runtime env var and changing it needs no rebuild.
+		mux.Handle("/vendor/", spaHandler{
+			root:         vendorDir,
+			prefix:       "/vendor/",
+			configScript: stytchConfigScript(os.Getenv("STYTCH_PUBLIC_TOKEN")),
+		})
 	} else {
 		log.Printf("frontends: vendor build not found at %s, /vendor disabled", vendorDir)
 	}
@@ -87,6 +95,17 @@ func withFrontends(apiHandler http.Handler) http.Handler {
 	}
 
 	return mux
+}
+
+// stytchConfigScript renders the runtime config script injected into the vendor
+// app's index.html. Empty token yields an empty string (no injection).
+func stytchConfigScript(token string) string {
+	if token == "" {
+		return ""
+	}
+	// json.Marshal escapes the value, so it is safe to embed in the page.
+	b, _ := json.Marshal(map[string]string{"stytchPublicToken": token})
+	return "<script>window.__APP_CONFIG__=" + string(b) + "</script>"
 }
 
 // newAuthMiddleware builds the Stytch session-JWT middleware from the
@@ -124,10 +143,12 @@ func dirHasIndex(dir string) bool {
 }
 
 // spaHandler serves static files from root, falling back to index.html so the
-// Angular client-side router can handle unknown paths.
+// Angular client-side router can handle unknown paths. When configScript is
+// set, it is injected into index.html before </head> for runtime config.
 type spaHandler struct {
-	root   string
-	prefix string
+	root         string
+	prefix       string
+	configScript string
 }
 
 func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -138,7 +159,25 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, file)
 		return
 	}
-	http.ServeFile(w, r, filepath.Join(h.root, "index.html"))
+	h.serveIndex(w, r)
+}
+
+// serveIndex writes index.html, injecting configScript before </head> when set.
+func (h spaHandler) serveIndex(w http.ResponseWriter, r *http.Request) {
+	index := filepath.Join(h.root, "index.html")
+	if h.configScript == "" {
+		http.ServeFile(w, r, index)
+		return
+	}
+	body, err := os.ReadFile(index)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	html := strings.Replace(string(body), "</head>", h.configScript+"</head>", 1)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	_, _ = io.WriteString(w, html)
 }
 
 // newGitHubClient builds the bot client from the environment, which the deploy

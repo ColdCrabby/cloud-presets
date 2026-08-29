@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "node scripts/inject-stytch.mjs && ng build --base-href /vendor/",
+    "build": "ng build --base-href /vendor/",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

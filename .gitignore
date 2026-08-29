@@ -45,6 +45,3 @@ out-tsc/
 **/out-tsc/
 npm-debug.log
 pnpm-debug.log
-
-# generated at build from STYTCH_PUBLIC_TOKEN
-apps/vendor-admin/src/environments/environment.prod.ts

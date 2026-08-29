@@ -1,12 +1,17 @@
 /**
- * Development configuration for the vendor-admin app. `apiBaseUrl` is
- * same-origin so requests reach the Go API serving this app. With an empty
- * `stytchPublicToken` the app uses a stub session. Production builds replace
- * this file with environment.prod.ts (see angular.json fileReplacements),
- * generated from STYTCH_PUBLIC_TOKEN by scripts/inject-stytch.mjs.
+ * Configuration for the vendor-admin app. `apiBaseUrl` is same-origin so
+ * requests reach the Go API serving this app. `stytchPublicToken` is read at
+ * runtime from `window.__APP_CONFIG__`, which the Go server injects into
+ * index.html from the STYTCH_PUBLIC_TOKEN env var; empty means stub sign-in.
  */
+declare global {
+  interface Window {
+    __APP_CONFIG__?: { stytchPublicToken?: string };
+  }
+}
+
 export const environment = {
   production: false,
   apiBaseUrl: '',
-  stytchPublicToken: '',
+  stytchPublicToken: globalThis.window?.__APP_CONFIG__?.stytchPublicToken ?? '',
 };
