@@ -7,6 +7,7 @@ OPENAPI_OUT ?= openapi.yaml
 .PHONY: build run dev test vet tidy openapi
 
 ## build: compile the Go API binary and build both Angular apps.
+## The vendor app bakes in STYTCH_PUBLIC_TOKEN (if set) for real sign-in.
 build:
 	$(GO) build -o bin/server ./cmd/server
 	$(PNPM) install --frozen-lockfile
