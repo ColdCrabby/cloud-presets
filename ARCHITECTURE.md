@@ -291,7 +291,10 @@ Rotation is designed for rather than deferred: verification accepts the previous
 secret during an overlap window so a rotation does not require a synchronized
 restart. The GitHub App is granted the narrowest useful permissions — enough to
 push branches and open pull requests, and deliberately **not** enough to bypass
-branch protection on `main`. The bot proposes; humans merge.
+branch protection on `main`. The bot proposes; humans merge. Its private key
+lives in the platform's secret store and reaches the process as an environment
+variable; the checked permission set and the key rotation procedure are in
+[docs/github-app-setup.md](./docs/github-app-setup.md).
 
 ---
 
@@ -333,7 +336,7 @@ rather than spread across every installed slicer.
 | Search | **In-process fuzzy matcher** | Returns scores and match positions; no service to operate. |
 | Auth | **Stytch B2B** | Organization/Member model maps to vendor companies; offline JWT validation; enterprise SSO available later without re-architecting. |
 | PR automation | **GitHub App (bot)** | Installation tokens scale with the org and need no per-vendor GitHub authorization. |
-| Frontends | **Angular 22** | Matches the slicer UI: standalone components, signals, `OnPush`, SCSS, Vitest, pnpm. |
+| Frontends | **Angular 22** | Matches the slicer UI: standalone components, signals, `OnPush`, SCSS, pnpm. |
 
 ---
 

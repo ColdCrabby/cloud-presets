@@ -30,14 +30,13 @@ the server and a new one rebuilds itself from `main`.
 
 ```sh
 # Go API — see the Makefile for individual targets
-make build test         # compile and run the Go test suite
+make build              # compile the Go API
 make run                # serve the API on :8080 (ADDR to override)
 
 # Frontends — from the repo root
 pnpm install
 pnpm stub-api           # dependency-free stand-in for the Go API, on :8787
 pnpm start:public       # serve the public app on :4200 (proxies /v1 to the stub)
-pnpm test               # run every package's Vitest suite
 ```
 
 See [docs/frontends.md](./docs/frontends.md) for the full frontend command
@@ -86,6 +85,7 @@ Then, by topic:
 | [docs/presets-repo-layout.md](./docs/presets-repo-layout.md) | How `ColdCrabby/presets` is organised, and how vendor ownership is expressed as files instead of database rows. |
 | [docs/api-surface.md](./docs/api-surface.md) | Endpoints, caching by catalog revision, the error model, and OpenAPI client generation. |
 | [docs/vendor-workflow.md](./docs/vendor-workflow.md) | Vendor sign-in, authorization, and how an edit becomes a merged pull request. |
+| [docs/github-app-setup.md](./docs/github-app-setup.md) | The bot GitHub App: expected settings and permissions, how its credentials reach the API, and the private key rotation procedure. |
 
 ---
 
@@ -122,7 +122,7 @@ is therefore itself a reviewed pull request.
 | Search | In-process fuzzy matching with scores and match positions |
 | Auth | Stytch B2B — offline JWT validation via JWKS |
 | Git automation | GitHub App via `go-github` + `ghinstallation` |
-| Frontends | Angular 22 — standalone components, signals, `OnPush`, SCSS, Vitest, pnpm |
+| Frontends | Angular 22 — standalone components, signals, `OnPush`, SCSS, pnpm |
 
 The frontends follow the slicer UI's existing conventions rather than
 introducing a second house style.
