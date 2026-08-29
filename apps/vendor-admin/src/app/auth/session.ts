@@ -101,26 +101,41 @@ export class SessionStore {
       this._member.set(null);
       return;
     }
+
+    // A live Stytch session means the user is logged in. Strip the single-use
+    // magic-link token from the URL so it can't be reprocessed into an error.
+    this.clearAuthQuery();
+
+    // Optimistically authenticated; enrich from the API when it's reachable.
+    let member: Member = { memberId: 'me', organizationSlug: '', roles: [] };
     try {
       const res = await fetch(`${environment.apiBaseUrl}/v1/me`, {
         headers: { Authorization: `Bearer ${this.sessionJwt}` },
       });
-      if (!res.ok) {
-        this._member.set(null);
-        return;
+      if (res.ok) {
+        const body = (await res.json()) as {
+          memberId: string;
+          organizationSlug?: string;
+          roles?: string[];
+        };
+        member = {
+          memberId: body.memberId,
+          organizationSlug: body.organizationSlug ?? '',
+          roles: body.roles ?? [],
+        };
       }
-      const body = (await res.json()) as {
-        memberId: string;
-        organizationSlug: string;
-        roles?: string[];
-      };
-      this._member.set({
-        memberId: body.memberId,
-        organizationSlug: body.organizationSlug,
-        roles: body.roles ?? [],
-      });
     } catch {
-      this._member.set(null);
+      // Keep the optimistic member; a session already exists.
+    }
+    this._member.set(member);
+  }
+
+  private clearAuthQuery(): void {
+    const url = new URL(globalThis.location.href);
+    if (url.searchParams.has('token') || url.searchParams.has('stytch_token_type')) {
+      url.searchParams.delete('token');
+      url.searchParams.delete('stytch_token_type');
+      globalThis.history.replaceState({}, '', url.toString());
     }
   }
 }
