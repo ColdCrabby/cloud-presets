@@ -25,7 +25,6 @@ whole system rests on.
 7. [Token Lifetime](#token-lifetime)
 8. [Rate Limits](#rate-limits)
 9. [Rotating the Private Key](#rotating-the-private-key)
-10. [If the Key Leaks](#if-the-key-leaks)
 
 ---
 
@@ -257,26 +256,6 @@ accepted, so the rotation needs no synchronized restart and no downtime window.
 Rotate on a schedule (annually is reasonable for a key with this narrow a blast
 radius), and immediately on any suspected exposure or when someone with access
 to the secret store leaves.
-
----
-
-## If the Key Leaks
-
-The key alone lets its holder act as the bot: push branches to
-`ColdCrabby/presets` and open pull requests. It does **not** let them merge, edit
-branch protection, or touch any other repository — that limitation is the reason
-the permission set is worth being fussy about.
-
-1. **Delete the compromised key** in the App's settings first. This is
-   immediate and unconditional; it takes precedence over avoiding downtime.
-2. Generate a replacement and deploy it (steps 1–3 above, in the other order).
-3. Review the repository's recent branches and pull requests for anything the
-   bot did not author on a vendor's behalf, and close anything unexplained.
-4. Since every legitimate change carries a provenance trailer with the vendor
-   slug and Stytch organization ID, a commit from the bot without one is a
-   strong signal.
-
----
 
 ## Reference
 

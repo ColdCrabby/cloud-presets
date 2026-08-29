@@ -33,7 +33,7 @@ type Config struct {
 	PrivateKeyPEM []byte
 
 	// BaseURL overrides the GitHub REST API root. Empty means github.com.
-	// Set it for GitHub Enterprise or to point tests at a local server.
+	// Set it for GitHub Enterprise or a local endpoint.
 	BaseURL string
 
 	// Repository is the "owner/name" the installation is expected to cover,
@@ -41,7 +41,7 @@ type Config struct {
 	Repository string
 
 	// Transport is the underlying round tripper the installation transport
-	// wraps. Nil means http.DefaultTransport. Mainly a test seam.
+	// wraps. Nil means http.DefaultTransport.
 	Transport http.RoundTripper
 }
 

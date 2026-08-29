@@ -336,7 +336,7 @@ rather than spread across every installed slicer.
 | Search | **In-process fuzzy matcher** | Returns scores and match positions; no service to operate. |
 | Auth | **Stytch B2B** | Organization/Member model maps to vendor companies; offline JWT validation; enterprise SSO available later without re-architecting. |
 | PR automation | **GitHub App (bot)** | Installation tokens scale with the org and need no per-vendor GitHub authorization. |
-| Frontends | **Angular 22** | Matches the slicer UI: standalone components, signals, `OnPush`, SCSS, Vitest, pnpm. |
+| Frontends | **Angular 22** | Matches the slicer UI: standalone components, signals, `OnPush`, SCSS, pnpm. |
 
 ---
 
