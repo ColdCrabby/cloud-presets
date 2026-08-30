@@ -5,14 +5,14 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  * house style rather than each re-implementing the same variants.
  */
 @Component({
-  selector: 'cp-button',
+  selector: 'ccc-button',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button
-      class="cp-button"
-      [class.cp-button--primary]="variant() === 'primary'"
-      [class.cp-button--ghost]="variant() === 'ghost'"
+      class="ccc-button"
+      [class.ccc-button--primary]="variant() === 'primary'"
+      [class.ccc-button--ghost]="variant() === 'ghost'"
       [attr.type]="type()"
       [disabled]="disabled()"
     >
@@ -21,7 +21,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   `,
   styleUrl: './button.scss',
 })
-export class CpButton {
+export class CccButton {
   readonly variant = input<'primary' | 'ghost'>('primary');
   readonly type = input<'button' | 'submit'>('button');
   readonly disabled = input(false);

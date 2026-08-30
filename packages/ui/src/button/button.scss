@@ -1,4 +1,4 @@
-.cp-button {
+.ccc-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -19,13 +19,13 @@
   }
 
   &--primary {
-    background-color: var(--cp-accent, #4f46e5);
+    background-color: var(--ccc-accent, #4f46e5);
     color: #fff;
   }
 
   &--ghost {
     background-color: transparent;
-    border-color: var(--cp-border, #d1d5db);
-    color: var(--cp-fg, #111214);
+    border-color: var(--ccc-border, #d1d5db);
+    color: var(--ccc-fg, #111214);
   }
 }

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { CpMatchHighlight } from '@cloud-presets/ui';
+import { CccMatchHighlight } from '@cloud-presets/ui';
 import { App } from './app';
 
 describe('App', () => {
@@ -19,7 +19,7 @@ describe('App', () => {
   });
 
   it('consumes the shared match-highlight primitive', async () => {
-    const fixture = TestBed.createComponent(CpMatchHighlight);
+    const fixture = TestBed.createComponent(CccMatchHighlight);
     fixture.componentRef.setInput('value', 'Prusa MK4');
     fixture.componentRef.setInput('ranges', [[6, 9]]);
     await fixture.whenStable();
