@@ -19,6 +19,10 @@ cd "$root_dir"
 
 if [ -d "$DEST/.git" ]; then
   echo "Updating $DEST from origin/$BRANCH ..."
+  # A persisted CI checkout may carry an old (e.g. SSH) origin that no longer
+  # authenticates; re-point it so the fetch below cannot silently freeze the
+  # vendored UI at a stale commit and ship outdated assets.
+  git -C "$DEST" remote set-url origin "$REPO_URL"
   git -C "$DEST" fetch --quiet origin "$BRANCH"
   # Fast-forward only: never clobber local commits waiting to be pushed upstream.
   if ! git -C "$DEST" merge --ff-only "origin/$BRANCH" >/dev/null 2>&1; then
