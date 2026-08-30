@@ -98,13 +98,33 @@ func main() {
 	}
 
 	holder := catalog.NewHolder()
+	// No ingest pipeline exists yet (a later foundation-wave issue), so seed a
+	// small sample catalog by default so GET /v1/presets serves real, rankable
+	// data. Set SEED_SAMPLE_CATALOG=0 to start empty (not ready) instead.
+	if seedSampleCatalog() {
+		c := catalog.Sample()
+		holder.Swap(c)
+		log.Printf("catalog: seeded sample revision %q (%d presets) pending ingest", c.Revision, len(c.Records))
+	}
 	_, apiHandler := api.New(holder, newAuthMiddleware(), newUploadOption(ghClient))
 
 	handler := withFrontends(apiHandler)
 
-	log.Printf("preset cloud API listening on %s (catalog not ready until first ingest)", addr)
+	log.Printf("preset cloud API listening on %s (ready=%t)", addr, holder.Ready())
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatalf("server stopped: %v", err)
+	}
+}
+
+// seedSampleCatalog reports whether to load the built-in sample catalog at
+// startup. It defaults to true and is disabled by setting SEED_SAMPLE_CATALOG
+// to "0" or "false".
+func seedSampleCatalog() bool {
+	switch strings.ToLower(os.Getenv("SEED_SAMPLE_CATALOG")) {
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return true
 	}
 }
 

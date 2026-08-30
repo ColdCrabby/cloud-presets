@@ -11,6 +11,8 @@ package catalog
 import (
 	"sync/atomic"
 	"time"
+
+	"github.com/ColdCrabby/cloud-presets/internal/search"
 )
 
 // Catalog is an immutable snapshot of the presets served for one Git commit.
@@ -22,8 +24,38 @@ type Catalog struct {
 	// Revision is the Git commit SHA the snapshot was built from.
 	Revision string
 
+	// BuildID is the server build identity the snapshot was assembled by
+	// (schema digest, validator version, binary build). Pagination cursors are
+	// bound to Revision+BuildID so a cursor issued before either changed is
+	// rejected rather than silently paginating across two catalogs.
+	BuildID string
+
 	// BuiltAt is when this snapshot was assembled.
 	BuiltAt time.Time
+
+	// Records is the in-memory search index over the snapshot: the short text
+	// fields search ranks and a result row renders, built atomically with the
+	// catalog from the same commit.
+	Records []search.Record
+
+	// Vendors is the public vendor directory for this revision, derived from
+	// the vendor.yaml manifests. It carries only the public representation:
+	// the authorization detail stytch_organization_id is deliberately absent.
+	Vendors []Vendor
+}
+
+// Vendor is one entry in the public vendor directory, derived from a
+// vendor.yaml manifest. See docs/api-surface.md ("Vendors") and
+// docs/presets-repo-layout.md ("Vendor manifest").
+type Vendor struct {
+	// Slug is the stable identifier, matching the vendor.yaml directory name.
+	Slug string
+
+	// DisplayName is the human-readable vendor name (the manifest's `name`).
+	DisplayName string
+
+	// Website is the vendor's site, or nil when the manifest omits it.
+	Website *string
 }
 
 // Holder is the concurrency-safe pointer to the current catalog.
