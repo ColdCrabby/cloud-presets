@@ -81,6 +81,9 @@ func (c *Client) AppID() int64 { return c.cfg.AppID }
 // InstallationID returns the configured installation ID.
 func (c *Client) InstallationID() int64 { return c.cfg.InstallationID }
 
+// Repository returns the configured "owner/name" the bot proposes changes to.
+func (c *Client) Repository() string { return c.cfg.Repository }
+
 // Token returns a valid installation access token, minting or refreshing it if
 // needed. Most callers should use REST instead; this exists for the few places
 // that need to hand a token to something that is not the REST client, such as a

@@ -14,12 +14,31 @@ import (
 
 	"github.com/ColdCrabby/cloud-presets/internal/auth"
 	"github.com/ColdCrabby/cloud-presets/internal/catalog"
+	"github.com/ColdCrabby/cloud-presets/internal/preset"
+	"github.com/ColdCrabby/cloud-presets/internal/submit"
+	"github.com/ColdCrabby/cloud-presets/internal/upload"
 )
 
 // BasePath is the version prefix every endpoint lives under. It is the API
 // version, independent of the preset schema version. See
 // docs/api-surface.md ("Versioning and Base Path").
 const BasePath = "/v1"
+
+// Option configures optional API dependencies passed to New. They are wired
+// through options so the OpenAPI export and tests can build the API without a
+// preset validator, upload store, or GitHub submitter.
+type Option func(*uploadDeps)
+
+// WithUploads enables the manual upload and claim endpoints, backed by the given
+// validator and draft store. submitter may be nil, in which case claiming
+// resolves and validates the change set but does not open a pull request.
+func WithUploads(v *preset.Validator, store *upload.Store, submitter submit.Submitter) Option {
+	return func(d *uploadDeps) {
+		d.validator = v
+		d.store = store
+		d.submitter = submitter
+	}
+}
 
 // New builds the API on a stdlib http.ServeMux via the humago adapter and
 // returns both the Huma API (for OpenAPI export) and the HTTP handler to
@@ -28,13 +47,21 @@ const BasePath = "/v1"
 //
 // When mw is non-nil, the caller-identity endpoint GET /v1/me is registered
 // behind it; when nil (e.g. the OpenAPI export), auth-gated routes are omitted.
-func New(holder *catalog.Holder, mw *auth.Middleware) (huma.API, http.Handler) {
+// The upload/claim endpoints are registered only when WithUploads supplies a
+// draft store.
+func New(holder *catalog.Holder, mw *auth.Middleware, opts ...Option) (huma.API, http.Handler) {
+	var deps uploadDeps
+	for _, o := range opts {
+		o(&deps)
+	}
+
 	mux := http.NewServeMux()
 	humaAPI := humago.New(mux, Config())
 	Register(humaAPI, holder)
 	if mw != nil {
 		mux.Handle("GET "+BasePath+"/me", mw.RequireAuth(http.HandlerFunc(handleMe)))
 	}
+	registerUploads(humaAPI, mw, deps)
 	return humaAPI, &problemRouter{mux: mux}
 }
 

@@ -9,13 +9,14 @@ import {
 import { Button } from '@coldcrabby/ui';
 import { Card } from '@cloud-presets/ui';
 import { SessionStore } from '../../auth/session';
+import { UploadPanel } from '../../uploads/upload-panel';
 import { VendorPresets } from './vendor-presets';
 
 @Component({
   selector: 'ccc-dashboard',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Button, Card],
+  imports: [Button, Card, UploadPanel],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })

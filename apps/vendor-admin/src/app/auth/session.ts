@@ -103,8 +103,18 @@ export class SessionStore {
         hideHeaderText: true,
         colors: { primary: '#f5883a', secondary: '#b7bac1', success: '#5fbf82', error: '#f16b6b' },
         buttons: {
-          primary: { backgroundColor: '#f5883a', textColor: '#1c1204', borderColor: '#f5883a', borderRadius: '10px' },
-          secondary: { backgroundColor: '#1b1c20', textColor: '#f3f4f6', borderColor: '#2b2e34', borderRadius: '10px' },
+          primary: {
+            backgroundColor: '#f5883a',
+            textColor: '#1c1204',
+            borderColor: '#f5883a',
+            borderRadius: '10px',
+          },
+          secondary: {
+            backgroundColor: '#1b1c20',
+            textColor: '#f3f4f6',
+            borderColor: '#2b2e34',
+            borderRadius: '10px',
+          },
         },
         inputs: {
           backgroundColor: '#17181b',
@@ -120,8 +130,18 @@ export class SessionStore {
       hideHeaderText: true,
       colors: { primary: '#e0730f', secondary: '#55575d', success: '#3a9d5b', error: '#dc4b47' },
       buttons: {
-        primary: { backgroundColor: '#e0730f', textColor: '#ffffff', borderColor: '#e0730f', borderRadius: '10px' },
-        secondary: { backgroundColor: '#ffffff', textColor: '#1a1b1d', borderColor: '#e4e3e0', borderRadius: '10px' },
+        primary: {
+          backgroundColor: '#e0730f',
+          textColor: '#ffffff',
+          borderColor: '#e0730f',
+          borderRadius: '10px',
+        },
+        secondary: {
+          backgroundColor: '#ffffff',
+          textColor: '#1a1b1d',
+          borderColor: '#e4e3e0',
+          borderRadius: '10px',
+        },
       },
       inputs: {
         backgroundColor: '#ffffff',

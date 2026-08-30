@@ -1,0 +1,44 @@
+.upload {
+  &__lead {
+    margin: 0 0 1rem;
+    color: var(--color-text-secondary, #55575d);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  &__kind {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  &__hint {
+    color: var(--color-text-secondary, #55575d);
+    font-size: 0.8rem;
+  }
+
+  &__file {
+    display: block;
+    margin-bottom: 0.75rem;
+
+    input {
+      width: 100%;
+    }
+  }
+
+  &__files {
+    margin: 0 0 0.75rem;
+    padding-left: 1.1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem;
+  }
+
+  &__error {
+    margin: 0 0 0.75rem;
+    color: var(--color-danger, #dc4b47);
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+  }
+}

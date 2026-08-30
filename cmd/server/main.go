@@ -24,6 +24,9 @@ import (
 	"github.com/ColdCrabby/cloud-presets/internal/auth"
 	"github.com/ColdCrabby/cloud-presets/internal/catalog"
 	ghapp "github.com/ColdCrabby/cloud-presets/internal/github"
+	"github.com/ColdCrabby/cloud-presets/internal/preset"
+	"github.com/ColdCrabby/cloud-presets/internal/submit"
+	"github.com/ColdCrabby/cloud-presets/internal/upload"
 )
 
 // defaultPresetsRepository is the repository the bot proposes changes to.
@@ -39,6 +42,42 @@ const (
 // slow GitHub cannot hold the server off its listener.
 const installationCheckTimeout = 15 * time.Second
 
+// newUploadOption builds the api.WithUploads option: a pinned preset validator,
+// an in-memory draft store, and — when the bot is configured — a GitHub-backed
+// submitter that opens pull requests. When the validator cannot be built the
+// upload endpoints are disabled rather than serving unvalidated uploads; when
+// the bot is absent, claiming still resolves and validates but does not open a
+// pull request.
+func newUploadOption(ghClient *ghapp.Client) api.Option {
+	validator, err := preset.New()
+	if err != nil {
+		log.Printf("uploads: preset validator unavailable, manual upload is disabled: %v", err)
+		return api.WithUploads(nil, nil, nil)
+	}
+
+	var submitter submit.Submitter
+	if ghClient != nil {
+		s, err := ghapp.NewSubmitter(ghClient)
+		if err != nil {
+			log.Printf("uploads: submitter unavailable, PRs will not be opened: %v", err)
+		} else {
+			submitter = s
+		}
+	}
+
+	store := upload.NewStore(upload.DefaultTTL)
+	log.Printf("uploads: manual upload enabled (drafts expire after %s, PRs %s)",
+		upload.DefaultTTL, prState(submitter != nil))
+	return api.WithUploads(validator, store, submitter)
+}
+
+func prState(enabled bool) string {
+	if enabled {
+		return "enabled"
+	}
+	return "disabled"
+}
+
 func main() {
 	addr := os.Getenv("ADDR")
 	if addr == "" {
@@ -49,7 +88,8 @@ func main() {
 		}
 	}
 
-	if _, err := newGitHubClient(); err != nil {
+	ghClient, err := newGitHubClient()
+	if err != nil {
 		if errors.Is(err, ghapp.ErrNotConfigured) {
 			log.Print("github: no App credentials in the environment, vendor submissions are disabled")
 		} else {
@@ -66,7 +106,7 @@ func main() {
 		holder.Swap(c)
 		log.Printf("catalog: seeded sample revision %q (%d presets) pending ingest", c.Revision, len(c.Records))
 	}
-	_, apiHandler := api.New(holder, newAuthMiddleware())
+	_, apiHandler := api.New(holder, newAuthMiddleware(), newUploadOption(ghClient))
 
 	handler := withFrontends(apiHandler)
 

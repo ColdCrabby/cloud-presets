@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -14,7 +15,14 @@ type TokenExtractor func(*http.Request) string
 
 // BearerToken extracts a token from an "Authorization: Bearer <jwt>" header.
 func BearerToken(r *http.Request) string {
-	h := r.Header.Get("Authorization")
+	return BearerFromHeader(r.Header.Get("Authorization"))
+}
+
+// BearerFromHeader extracts the token from a raw Authorization header value.
+// It is exported so callers that only have the header string — such as the
+// Huma operation middleware, which reads headers off the huma.Context rather
+// than an *http.Request — can reuse the exact same parsing.
+func BearerFromHeader(h string) string {
 	if h == "" {
 		return ""
 	}
@@ -52,6 +60,20 @@ func (m *Middleware) WithErrorWriter(w func(http.ResponseWriter, *http.Request, 
 	m.writeError = w
 	return m
 }
+
+// Verify validates a raw session token and returns its claims. It is the seam
+// the Huma operation middleware uses: that path reads the token off the
+// huma.Context and needs to run the same verification as RequireAuth without an
+// *http.Request. The reason helpers below translate any failure into a stable
+// message.
+func (m *Middleware) Verify(ctx context.Context, token string) (Claims, error) {
+	return m.verifier.Verify(ctx, token)
+}
+
+// Reason renders a stable, client-safe description of an authentication error,
+// matching what RequireAuth puts in its 401. Exported so the Huma middleware
+// produces identical wording.
+func Reason(err error) string { return reason(err) }
 
 // RequireAuth wraps next so it only runs for requests carrying a valid session
 // JWT. On any authentication failure it writes a 401 and does not call next —

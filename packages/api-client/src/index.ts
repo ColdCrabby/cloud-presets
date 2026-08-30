@@ -9,6 +9,7 @@ export * from './generated';
 export { client as cloudPresetsClient } from './generated/client.gen';
 
 import { client } from './generated/client.gen';
+import type { PresetSummary } from './generated';
 
 /**
  * Point the shared client at an API base URL. Apps call this once at startup
@@ -44,3 +45,19 @@ client.interceptors.request.use((request) => {
   return request;
 });
 
+/**
+ * List the caller's vendor-scoped presets (`GET /v1/vendor/presets`).
+ *
+ * This endpoint is documented in the API surface but not yet served by the Go
+ * backend, so it is intentionally absent from the generated SDK (which is
+ * generated from the implemented spec). This thin wrapper over the shared client
+ * preserves the call site — with the same base URL and auth interceptor as every
+ * generated call — until the backend ships it and the SDK regenerates. It returns
+ * the same `{ data, error }` shape as a generated operation.
+ */
+export function listVendorPresets() {
+  return client.get<{ 200: Array<PresetSummary> }, unknown, false>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/vendor/presets',
+  });
+}
