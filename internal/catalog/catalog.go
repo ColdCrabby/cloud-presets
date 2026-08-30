@@ -41,10 +41,6 @@ type Vendor struct {
 	// DisplayName is the human-readable vendor name (the manifest's `name`).
 	DisplayName string
 
-	// Brands are the brand names this vendor may use in a preset's vendor
-	// field. A vendor always has at least its display name as a brand.
-	Brands []string
-
 	// Website is the vendor's site, or nil when the manifest omits it.
 	Website *string
 }

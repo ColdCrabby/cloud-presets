@@ -42,7 +42,6 @@ func TestListVendorsReturnsDirectoryAfterIngest(t *testing.T) {
 			{
 				Slug:        "prusa",
 				DisplayName: "Prusa",
-				Brands:      []string{"Prusa", "Prusament"},
 				Website:     &website,
 			},
 		},
@@ -57,7 +56,6 @@ func TestListVendorsReturnsDirectoryAfterIngest(t *testing.T) {
 	for _, want := range []string{
 		`"slug":"prusa"`,
 		`"display_name":"Prusa"`,
-		`"brands":["Prusa","Prusament"]`,
 		`"website":"https://www.prusa3d.com"`,
 	} {
 		if !strings.Contains(body, want) {
@@ -92,7 +90,7 @@ func TestListVendorsOmitsWebsiteWhenAbsent(t *testing.T) {
 		Revision: "abc123",
 		BuiltAt:  time.Now(),
 		Vendors: []catalog.Vendor{
-			{Slug: "acme", DisplayName: "Acme", Brands: []string{"Acme"}},
+			{Slug: "acme", DisplayName: "Acme"},
 		},
 	})
 

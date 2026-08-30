@@ -15,10 +15,9 @@ import (
 // because it is an authorization detail with no meaning to API consumers. See
 // docs/api-surface.md ("Vendors").
 type Vendor struct {
-	Slug        string   `json:"slug" doc:"Stable vendor slug, matching the vendor.yaml directory name."`
-	DisplayName string   `json:"display_name" doc:"Human-readable vendor name."`
-	Brands      []string `json:"brands" doc:"Brand names this vendor may use in a preset's vendor field."`
-	Website     *string  `json:"website,omitempty" format:"uri" doc:"Vendor website, when the manifest declares one."`
+	Slug        string  `json:"slug" doc:"Stable vendor slug, matching the vendor.yaml directory name."`
+	DisplayName string  `json:"display_name" doc:"Human-readable vendor name."`
+	Website     *string `json:"website,omitempty" format:"uri" doc:"Vendor website, when the manifest declares one."`
 }
 
 // ListVendorsResponse is the vendor directory as a top-level JSON array, the
@@ -52,14 +51,9 @@ func registerVendors(api huma.API, holder *catalog.Holder) {
 		}
 		resp := &ListVendorsResponse{Body: []Vendor{}}
 		for _, v := range current.Vendors {
-			brands := v.Brands
-			if brands == nil {
-				brands = []string{}
-			}
 			resp.Body = append(resp.Body, Vendor{
 				Slug:        v.Slug,
 				DisplayName: v.DisplayName,
-				Brands:      brands,
 				Website:     v.Website,
 			})
 		}
