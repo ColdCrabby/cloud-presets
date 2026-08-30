@@ -37,6 +37,25 @@ type Catalog struct {
 	// fields search ranks and a result row renders, built atomically with the
 	// catalog from the same commit.
 	Records []search.Record
+
+	// Vendors is the public vendor directory for this revision, derived from
+	// the vendor.yaml manifests. It carries only the public representation:
+	// the authorization detail stytch_organization_id is deliberately absent.
+	Vendors []Vendor
+}
+
+// Vendor is one entry in the public vendor directory, derived from a
+// vendor.yaml manifest. See docs/api-surface.md ("Vendors") and
+// docs/presets-repo-layout.md ("Vendor manifest").
+type Vendor struct {
+	// Slug is the stable identifier, matching the vendor.yaml directory name.
+	Slug string
+
+	// DisplayName is the human-readable vendor name (the manifest's `name`).
+	DisplayName string
+
+	// Website is the vendor's site, or nil when the manifest omits it.
+	Website *string
 }
 
 // Holder is the concurrency-safe pointer to the current catalog.

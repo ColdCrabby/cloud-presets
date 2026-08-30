@@ -88,5 +88,20 @@ func Sample() *Catalog {
 				Spec:   "0.28 mm layers, 2 walls, 10% infill",
 			},
 		},
+		Vendors: []Vendor{
+			{
+				Slug:        "prusa",
+				DisplayName: "Prusa",
+				Website:     strptr("https://www.prusa3d.com"),
+			},
+			{
+				Slug:        "bambulab",
+				DisplayName: "Bambu Lab",
+				Website:     strptr("https://bambulab.com"),
+			},
+		},
 	}
 }
+
+// strptr returns a pointer to s, for optional string fields in sample data.
+func strptr(s string) *string { return &s }
