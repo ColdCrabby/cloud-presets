@@ -6,6 +6,21 @@
   gap: 0.75rem;
 }
 
+.dashboard__signin {
+  width: 100%;
+  max-width: 26rem;
+  margin: 3.5rem auto 0;
+}
+
+.dashboard__signin-lead {
+  margin: 0 0 1rem;
+  color: var(--color-text-secondary);
+}
+
+.dashboard__login {
+  margin-top: 0.25rem;
+}
+
 .dashboard__bar {
   display: flex;
   align-items: center;

@@ -6,13 +6,16 @@
 //
 //	go run ./cmd/openapi [output-path]
 //
-// The default output path is "openapi.yaml". Huma emits OpenAPI 3.1; no 3.0
-// downgrade is performed here. See docs/api-surface.md ("Client Generation").
+// The default output path is "openapi.yaml". A ".json" extension emits JSON
+// (what the Angular client generator consumes); anything else emits YAML. Huma
+// emits OpenAPI 3.1; no 3.0 downgrade is performed here. See docs/api-surface.md
+// ("Client Generation").
 package main
 
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/ColdCrabby/cloud-presets/internal/api"
 	"github.com/ColdCrabby/cloud-presets/internal/catalog"
@@ -27,7 +30,13 @@ func main() {
 	// Build the same API the server serves so the exported spec matches it.
 	humaAPI, _ := api.New(catalog.NewHolder(), nil)
 
-	doc, err := humaAPI.OpenAPI().YAML()
+	var doc []byte
+	var err error
+	if strings.HasSuffix(strings.ToLower(out), ".json") {
+		doc, err = humaAPI.OpenAPI().MarshalJSON()
+	} else {
+		doc, err = humaAPI.OpenAPI().YAML()
+	}
 	if err != nil {
 		log.Fatalf("marshal OpenAPI document: %v", err)
 	}

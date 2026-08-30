@@ -1,5 +1,6 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { StytchUIClient, StytchUI, Products, OTPMethods } from '@stytch/vanilla-js';
+import { ThemeService } from '@coldcrabby/ui';
 import { setCloudPresetsAuthTokenProvider } from '@cloud-presets/api-client';
 import { environment } from '../../environments/environment';
 
@@ -24,6 +25,8 @@ export class SessionStore {
   private sessionJwt: string | null = null;
   private stytch: StytchUIClient | null = null;
   private mounted = false;
+  private readonly theme = inject(ThemeService);
+  private loginEl: (HTMLElement & { render: (opts: unknown) => void }) | null = null;
 
   readonly member = this._member.asReadonly();
   readonly authError = this._authError.asReadonly();
@@ -44,6 +47,12 @@ export class SessionStore {
         void this.syncFromStytch();
       }
     }
+
+    // Re-theme the mounted Stytch widget whenever the colour scheme flips.
+    effect(() => {
+      const dark = this.theme.isDarkMode();
+      this.loginEl?.render(this.renderOptions(dark));
+    });
   }
 
   /** Mount the Stytch login UI into host. No-op in sample mode or during callback. */
@@ -58,11 +67,17 @@ export class SessionStore {
     const el = document.createElement('stytch-login') as HTMLElement & {
       render: (opts: unknown) => void;
     };
+    this.loginEl = el;
     host.replaceChildren(el);
-    // Email one-time passcode: the user enters a code on this page, so there is
-    // no redirect and no redirect-URL configuration to get wrong.
-    el.render({
+    el.render(this.renderOptions(this.theme.isDarkMode()));
+  }
+
+  /** Full Stytch render options, themed to the active colour scheme. */
+  private renderOptions(dark: boolean): unknown {
+    return {
       client: this.stytch,
+      // Email one-time passcode: the user enters a code on this page, so there is
+      // no redirect and no redirect-URL configuration to get wrong.
       config: {
         products: [Products.otp],
         otpOptions: {
@@ -71,7 +86,51 @@ export class SessionStore {
         },
         sessionOptions: { sessionDurationMinutes: 60 },
       },
-    });
+      styles: this.stytchStyles(dark),
+    };
+  }
+
+  /**
+   * Stytch widget styling mapped onto the app's design tokens per theme. The
+   * card behind the widget supplies the surface, so the widget is transparent
+   * and header-less to sit flush inside it.
+   */
+  private stytchStyles(dark: boolean): unknown {
+    const container = { backgroundColor: 'transparent', borderColor: 'transparent', width: '100%' };
+    if (dark) {
+      return {
+        container,
+        hideHeaderText: true,
+        colors: { primary: '#f5883a', secondary: '#b7bac1', success: '#5fbf82', error: '#f16b6b' },
+        buttons: {
+          primary: { backgroundColor: '#f5883a', textColor: '#1c1204', borderColor: '#f5883a', borderRadius: '10px' },
+          secondary: { backgroundColor: '#1b1c20', textColor: '#f3f4f6', borderColor: '#2b2e34', borderRadius: '10px' },
+        },
+        inputs: {
+          backgroundColor: '#17181b',
+          borderColor: '#2b2e34',
+          textColor: '#f3f4f6',
+          placeholderColor: '#b7bac1',
+          borderRadius: '10px',
+        },
+      };
+    }
+    return {
+      container,
+      hideHeaderText: true,
+      colors: { primary: '#e0730f', secondary: '#55575d', success: '#3a9d5b', error: '#dc4b47' },
+      buttons: {
+        primary: { backgroundColor: '#e0730f', textColor: '#ffffff', borderColor: '#e0730f', borderRadius: '10px' },
+        secondary: { backgroundColor: '#ffffff', textColor: '#1a1b1d', borderColor: '#e4e3e0', borderRadius: '10px' },
+      },
+      inputs: {
+        backgroundColor: '#ffffff',
+        borderColor: '#e4e3e0',
+        textColor: '#1a1b1d',
+        placeholderColor: '#55575d',
+        borderRadius: '10px',
+      },
+    };
   }
 
   /** Sample sign-in for when Stytch is not configured. */

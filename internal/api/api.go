@@ -66,5 +66,13 @@ func Config() huma.Config {
 	cfg := huma.DefaultConfig("Cold Crabby Preset Cloud", "1.0.0")
 	cfg.OpenAPI.Info.Description = "In-memory, searchable catalog of 3D printer presets " +
 		"served from ColdCrabby/presets. See docs/api-surface.md."
+	// The whole API is mounted under BasePath ("/v1") by the server, so Huma's
+	// auto-served meta paths must live there too. At their defaults (site root)
+	// the schema URLs embedded in every response ($schema and the describedBy
+	// Link header) point outside the mount and resolve to the SPA, so they are
+	// unreachable.
+	cfg.SchemasPath = BasePath + cfg.SchemasPath
+	cfg.OpenAPIPath = BasePath + cfg.OpenAPIPath
+	cfg.DocsPath = BasePath + cfg.DocsPath
 	return cfg
 }

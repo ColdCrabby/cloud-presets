@@ -1,13 +1,15 @@
 <section class="dashboard">
   @if (!session.isAuthenticated()) {
-    <ccc-card heading="Sign in">
-      <p>Sign in to manage your organization's presets.</p>
-      @if (session.usesStytch) {
-        <div #loginHost></div>
-      } @else {
-        <button nexusButton variant="primary" (click)="session.signIn()">Sign in (sample)</button>
-      }
-    </ccc-card>
+    <div class="dashboard__signin">
+      <ccc-card heading="Sign in">
+        <p class="dashboard__signin-lead">Sign in to manage your organization's presets.</p>
+        @if (session.usesStytch) {
+          <div class="dashboard__login" #loginHost></div>
+        } @else {
+          <button nexusButton variant="primary" (click)="session.signIn()">Sign in (sample)</button>
+        }
+      </ccc-card>
+    </div>
   } @else {
     <div class="dashboard__bar">
       <div>
