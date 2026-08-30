@@ -1,0 +1,53 @@
+<ccc-card heading="Upload presets">
+  <p class="upload__lead">
+    Upload printer or filament preset YAML files, or a <code>.zip</code> laid out like the presets
+    repository (<code>printers/…</code>, <code>filaments/…</code>). We validate them, then hand you
+    to a review page to open the pull request.
+  </p>
+
+  <div class="upload__kind" role="group" aria-label="Preset type for individual files">
+    <button
+      nexusButton
+      [variant]="kind() === 'printer' ? 'primary' : 'secondary'"
+      size="sm"
+      type="button"
+      [disabled]="hasZip"
+      (click)="setKind('printer')"
+    >
+      Printer
+    </button>
+    <button
+      nexusButton
+      [variant]="kind() === 'filament' ? 'primary' : 'secondary'"
+      size="sm"
+      type="button"
+      [disabled]="hasZip"
+      (click)="setKind('filament')"
+    >
+      Filament
+    </button>
+    @if (hasZip) {
+      <span class="upload__hint">Type is read from the zip layout.</span>
+    }
+  </div>
+
+  <label class="upload__file">
+    <input type="file" multiple accept=".yaml,.yml,.zip" (change)="onFiles($event)" />
+  </label>
+
+  @if (fileNames().length) {
+    <ul class="upload__files">
+      @for (name of fileNames(); track name) {
+        <li>{{ name }}</li>
+      }
+    </ul>
+  }
+
+  @if (error()) {
+    <p class="upload__error">{{ error() }}</p>
+  }
+
+  <button nexusButton variant="primary" type="button" [disabled]="busy()" (click)="submit()">
+    {{ busy() ? 'Uploading…' : 'Upload and review' }}
+  </button>
+</ccc-card>

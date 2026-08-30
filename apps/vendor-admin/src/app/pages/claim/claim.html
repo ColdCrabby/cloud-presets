@@ -1,0 +1,80 @@
+<section class="claim">
+  <a routerLink="/" class="claim__back">← Back to dashboard</a>
+
+  @if (loadError()) {
+    <ccc-card heading="Upload not found">
+      <p class="claim__status claim__status--error">{{ loadError() }}</p>
+      <a nexusButton variant="primary" routerLink="/">Start over</a>
+    </ccc-card>
+  } @else if (draft(); as d) {
+    <ccc-card heading="Review upload">
+      <p class="claim__lead">
+        {{ d.files.length }} preset{{ d.files.length === 1 ? '' : 's' }} ready to submit. Review
+        them, then open a pull request against the presets repository.
+      </p>
+
+      <ul class="claim__files">
+        @for (file of d.files; track file.fileName) {
+          <li class="claim__file">
+            <header class="claim__file-head">
+              <span class="claim__badge">{{ file.kind }}</span>
+              <strong>{{ file.name }}</strong>
+              <code>{{ file.fileName }}</code>
+            </header>
+            <pre class="claim__yaml">{{ file.content }}</pre>
+          </li>
+        }
+      </ul>
+    </ccc-card>
+
+    @if (result(); as r) {
+      <ccc-card heading="Submitted">
+        @if (r.prCreated) {
+          <p class="claim__status claim__status--ok">
+            Pull request opened for <strong>{{ r.vendor }}</strong
+            >.
+          </p>
+          <a nexusButton variant="primary" [href]="r.pullRequestUrl" target="_blank" rel="noopener">
+            View pull request
+          </a>
+        } @else {
+          <p class="claim__status">{{ r.message }}</p>
+          <ul class="claim__paths">
+            @for (path of r.files; track path) {
+              <li>
+                <code>{{ path }}</code>
+              </li>
+            }
+          </ul>
+        }
+      </ccc-card>
+    } @else if (session.isAuthenticated()) {
+      <ccc-card heading="Open a pull request">
+        <p class="claim__lead">
+          Signed in as <strong>{{ session.member()?.organizationSlug }}</strong
+          >. Submitting opens a pull request authored by the Cold Crabby bot; your organization is
+          recorded as the proposer.
+        </p>
+        @if (claimError()) {
+          <p class="claim__status claim__status--error">{{ claimError() }}</p>
+        }
+        <button nexusButton variant="primary" type="button" [disabled]="busy()" (click)="claim()">
+          {{ busy() ? 'Submitting…' : 'Create pull request' }}
+        </button>
+      </ccc-card>
+    } @else {
+      <ccc-card heading="Sign in to submit">
+        <p class="claim__lead">Sign in to your vendor organization to open the pull request.</p>
+        @if (session.usesStytch) {
+          <div class="claim__login" #loginHost></div>
+        } @else {
+          <button nexusButton variant="primary" type="button" (click)="session.signIn()">
+            Sign in (sample)
+          </button>
+        }
+      </ccc-card>
+    }
+  } @else {
+    <p class="claim__status">Loading upload…</p>
+  }
+</section>

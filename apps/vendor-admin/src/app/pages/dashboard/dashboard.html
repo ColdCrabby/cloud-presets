@@ -19,6 +19,8 @@
       <button nexusButton variant="ghost" (click)="session.signOut()">Sign out</button>
     </div>
 
+    <ccc-upload-panel />
+
     @if (presets.loading()) {
       <p class="dashboard__status">Loading your presets…</p>
     } @else if (presets.error(); as error) {

@@ -268,6 +268,48 @@ Upstream GitHub failures surface as `502` (GitHub rejected or was unreachable)
 or `503` with `Retry-After` when the App's rate limit is exhausted — never as a
 success the client would have to reconcile later.
 
+### Manual upload and claim
+
+```http
+POST /v1/uploads                 # park uploaded preset files (public)
+GET  /v1/uploads/{id}            # read a parked draft for review (public)
+POST /v1/uploads/{id}/claim      # authorize + open a PR for the draft (Stytch JWT)
+```
+
+For vendors who already have preset files — a `.zip` exported elsewhere, or a
+handful of YAML files — this is the manual equivalent of the slicer hand-off.
+The shape is the same **upload, then claim** flow: park the files under an
+unguessable id, then let the admin app load them back to review and submit.
+
+`POST /v1/uploads` accepts a multipart form carrying either a `.zip` laid out
+like the repository (`printers/…`, `filaments/…`, `processes/…`) or individual
+preset files. A bare file's kind comes from its form field name
+(`printer`/`filament`) or a `type` field; a zip's kind comes from each entry's
+path. Every file is validated against the **same pinned schemas** as CI and
+ingest before it is parked, so an invalid upload fails fast with structured,
+per-file errors rather than being discovered at claim time. On success the
+endpoint returns the draft id and a `claimUrl`, or — with `?redirect=1` or a
+browser form post — a `303` to that URL in the admin app.
+
+The parked draft is **ephemeral, in-memory, and TTL-bounded**: it is not a
+database, it does not survive a restart, and it is dropped after roughly half an
+hour. It is the transient carrier of a hand-off, nothing more.
+
+`GET /v1/uploads/{id}` returns the draft for review. Like the hand-off token, the
+id **authorizes nothing** — it only lets the admin app render the files.
+
+`POST /v1/uploads/{id}/claim` is where authority is checked. It requires a Stytch
+session JWT, resolves the caller's writable vendor slug from the `vendor.yaml`
+manifest at the current head (a `403` when the organization owns no namespace),
+places each file at `vendors/<slug>/<printers|filaments>/<id>.yaml` so a vendor
+can never write outside its own directory, and opens a pull request through the
+bot exactly as [Propose a change](#propose-a-change) does — same idempotent,
+content-derived branch, same provenance trailer. Process presets are rejected: the
+shared `processes/` namespace is not writable through the API. Claiming consumes
+the draft. When the bot is not configured (local dev), the claim still resolves
+and validates the change set and reports the target paths, but opens no pull
+request.
+
 ---
 
 ## Slicer Hand-Off
