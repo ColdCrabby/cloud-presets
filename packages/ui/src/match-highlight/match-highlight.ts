@@ -7,19 +7,19 @@ import { matchSegments, type MatchRange } from './match-segments';
  * ranking the server actually applied.
  */
 @Component({
-  selector: 'cp-match-highlight',
+  selector: 'ccc-match-highlight',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `@for (segment of segments(); track $index) {
     @if (segment.matched) {
-      <mark class="cp-highlight">{{ segment.text }}</mark>
+      <mark class="ccc-highlight">{{ segment.text }}</mark>
     } @else {
       <span>{{ segment.text }}</span>
     }
   }`,
   styleUrl: './match-highlight.scss',
 })
-export class CpMatchHighlight {
+export class CccMatchHighlight {
   readonly value = input.required<string>();
   readonly ranges = input<readonly MatchRange[]>([]);
 

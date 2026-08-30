@@ -6,15 +6,15 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
-import { CpButton, CpCard } from '@cloud-presets/ui';
+import { CccButton, CccCard } from '@cloud-presets/ui';
 import { SessionStore } from '../../auth/session';
 import { VendorPresets } from './vendor-presets';
 
 @Component({
-  selector: 'cp-dashboard',
+  selector: 'ccc-dashboard',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CpButton, CpCard],
+  imports: [CccButton, CccCard],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })

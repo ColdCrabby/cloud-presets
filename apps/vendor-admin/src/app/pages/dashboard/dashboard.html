@@ -1,20 +1,20 @@
 <section class="dashboard">
   @if (!session.isAuthenticated()) {
-    <cp-card heading="Sign in">
+    <ccc-card heading="Sign in">
       <p>Sign in to manage your organization's presets.</p>
       @if (session.usesStytch) {
         <div #loginHost></div>
       } @else {
-        <cp-button (click)="session.signIn()">Sign in (stub)</cp-button>
+        <ccc-button (click)="session.signIn()">Sign in (stub)</ccc-button>
       }
-    </cp-card>
+    </ccc-card>
   } @else {
     <div class="dashboard__bar">
       <div>
         <strong>{{ session.member()?.organizationSlug }}</strong>
         <span class="dashboard__email">{{ session.member()?.memberId }}</span>
       </div>
-      <cp-button variant="ghost" (click)="session.signOut()">Sign out</cp-button>
+      <ccc-button variant="ghost" (click)="session.signOut()">Sign out</ccc-button>
     </div>
 
     @if (presets.loading()) {
@@ -25,10 +25,10 @@
       <ul class="dashboard__list">
         @for (preset of presets.items(); track preset.id) {
           <li>
-            <cp-card [heading]="preset.type">
+            <ccc-card [heading]="preset.type">
               <h2 class="dashboard__name">{{ preset.name }}</h2>
               <p class="dashboard__spec">{{ preset.spec }}</p>
-            </cp-card>
+            </ccc-card>
           </li>
         } @empty {
           <li class="dashboard__status">Your organization owns no presets yet.</li>
