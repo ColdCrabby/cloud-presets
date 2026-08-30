@@ -2,7 +2,7 @@
 
 GO ?= go
 PNPM ?= pnpm
-OPENAPI_OUT ?= openapi.yaml
+OPENAPI_OUT ?= openapi/openapi.gen.json
 
 .PHONY: build run dev test vet tidy openapi
 
