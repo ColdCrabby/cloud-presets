@@ -341,13 +341,12 @@
                         }
                     },
                     {
-                        "description": "Maximum results to return.",
+                        "description": "Maximum results to return (bounded server-side).",
                         "explode": false,
                         "in": "query",
                         "name": "limit",
                         "schema": {
-                            "default": 20,
-                            "description": "Maximum results to return.",
+                            "description": "Maximum results to return (bounded server-side).",
                             "format": "int64",
                             "maximum": 100,
                             "minimum": 1,
@@ -376,7 +375,7 @@
                         },
                         "description": "OK"
                     },
-                    "default": {
+                    "409": {
                         "content": {
                             "application/problem+json": {
                                 "schema": {
@@ -384,12 +383,42 @@
                                 }
                             }
                         },
-                        "description": "Error"
+                        "description": "Conflict"
+                    },
+                    "422": {
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorModel"
+                                }
+                            }
+                        },
+                        "description": "Unprocessable Entity"
+                    },
+                    "500": {
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorModel"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    },
+                    "503": {
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorModel"
+                                }
+                            }
+                        },
+                        "description": "Service Unavailable"
                     }
                 },
-                "summary": "Search presets",
+                "summary": "Search or browse the preset catalog",
                 "tags": [
-                    "Presets"
+                    "public"
                 ]
             }
         }
