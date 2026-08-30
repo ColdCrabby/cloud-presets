@@ -8,7 +8,9 @@
 # the shared UI can be committed here and pushed straight to ColdCrabby/ui.
 set -eu
 
-REPO_URL="git@github.com:ColdCrabby/ui.git"
+# HTTPS so CI/deploy hosts (e.g. Render) with no SSH key can clone the public
+# repo; override with UI_REPO_URL=git@github.com:ColdCrabby/ui.git to push.
+REPO_URL="${UI_REPO_URL:-https://github.com/ColdCrabby/ui.git}"
 DEST=".coldcrabby-ui"
 BRANCH="main"
 
