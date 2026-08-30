@@ -15,7 +15,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.app-header__title')?.textContent).toContain('Vendor Admin');
+    expect(compiled.querySelector('.shell__section')?.textContent).toContain('Vendor Admin');
   });
 });
 

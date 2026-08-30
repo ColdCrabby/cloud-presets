@@ -1,8 +1,4 @@
-<header class="app-header">
-  <span class="app-header__brand">Cold Crabby</span>
-  <span class="app-header__title">Vendor Admin</span>
-  <a class="app-header__vendor" [href]="publicUrl">← Back to catalog</a>
-</header>
-<main>
+<ccc-app-shell section="Vendor Admin" [homeUrl]="'/'">
+  <a shell-nav [href]="publicUrl">← Back to catalog</a>
   <router-outlet />
-</main>
+</ccc-app-shell>

@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Button } from '@coldcrabby/ui';
-import { CpCard, CpMatchHighlight } from '@cloud-presets/ui';
+import { Card, MatchHighlight } from '@cloud-presets/ui';
 import { Catalog } from '../../catalog';
 
 @Component({
-  selector: 'cp-browse',
+  selector: 'ccc-browse',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Button, CpCard, CpMatchHighlight],
+  imports: [Button, Card, MatchHighlight],
   templateUrl: './browse.html',
   styleUrl: './browse.scss',
 })

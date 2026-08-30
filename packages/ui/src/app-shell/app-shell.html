@@ -1,0 +1,32 @@
+<header class="shell__header">
+  <div class="shell__bar">
+    @if (homeUrl(); as url) {
+      <a class="shell__brand" [href]="url">
+        <img class="shell__mascot" src="mascot.png" alt="" width="28" height="28" aria-hidden="true" />
+        @if (section()) {
+          <span class="shell__brand-divider" aria-hidden="true"></span>
+          <span class="shell__section">{{ section() }}</span>
+        }
+      </a>
+    } @else {
+      <span class="shell__brand">
+        <img class="shell__mascot" src="mascot.png" alt="" width="28" height="28" aria-hidden="true" />
+        @if (section()) {
+          <span class="shell__brand-divider" aria-hidden="true"></span>
+          <span class="shell__section">{{ section() }}</span>
+        }
+      </span>
+    }
+
+    <nav class="shell__nav" aria-label="Primary">
+      <ng-content select="[shell-nav]" />
+      <ccc-theme-toggle />
+    </nav>
+  </div>
+</header>
+
+<main class="shell__main">
+  <div class="shell__container">
+    <ng-content />
+  </div>
+</main>

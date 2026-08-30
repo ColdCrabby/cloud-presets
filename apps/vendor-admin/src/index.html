@@ -5,9 +5,42 @@
     <title>Cold Crabby · Vendor Admin</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="icon" type="image/png" href="mascot.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200..800&family=IBM+Plex+Mono:wght@100;200;300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Pre-paint the theme before the app stylesheet loads (no white flash).
+         Scoped to <html> with the real token values so the design language's
+         body rules take over cleanly once loaded — a higher-specificity
+         `html.dark body` rule here would otherwise pin the wrong colour. */
+      html {
+        margin: 0;
+        background-color: #f6f6f4;
+        color: #1a1b1d;
+      }
+      html.dark {
+        background-color: #101113;
+        color: #f3f4f6;
+      }
+    </style>
+    <script>
+      // Apply the persisted theme synchronously to avoid a light/dark flash.
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          var dark = stored
+            ? stored === 'dark'
+            : matchMedia('(prefers-color-scheme: dark)').matches;
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (_) {}
+      })();
+    </script>
   </head>
   <body>
-    <cp-root></cp-root>
+    <ccc-root></ccc-root>
   </body>
 </html>

@@ -7,15 +7,15 @@ import {
   viewChild,
 } from '@angular/core';
 import { Button } from '@coldcrabby/ui';
-import { CpCard } from '@cloud-presets/ui';
+import { Card } from '@cloud-presets/ui';
 import { SessionStore } from '../../auth/session';
 import { VendorPresets } from './vendor-presets';
 
 @Component({
-  selector: 'cp-dashboard',
+  selector: 'ccc-dashboard',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Button, CpCard],
+  imports: [Button, Card],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })

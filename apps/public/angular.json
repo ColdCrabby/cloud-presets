@@ -20,7 +20,7 @@
       },
       "root": "",
       "sourceRoot": "src",
-      "prefix": "cp",
+      "prefix": "ccc",
       "architect": {
         "build": {
           "builder": "@angular/build:application",

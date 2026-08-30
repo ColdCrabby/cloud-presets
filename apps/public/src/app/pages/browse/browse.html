@@ -1,4 +1,11 @@
 <section class="browse">
+  <header class="browse__hero">
+    <h1 class="browse__title">Preset Catalog</h1>
+    <p class="browse__subtitle">
+      Community and vendor slicer presets, ready to import into Cold Crabby.
+    </p>
+  </header>
+
   <form class="browse__search" (submit)="$event.preventDefault(); submit()">
     <input
       class="browse__input"
@@ -26,16 +33,16 @@
     <ul class="browse__results">
       @for (preset of catalog.results(); track preset.id) {
         <li>
-          <cp-card [heading]="preset.vendor + ' · ' + preset.type">
+          <ccc-card [heading]="preset.vendor + ' · ' + preset.type">
             <h2 class="browse__name">
               @if (preset.match; as match) {
-                <cp-match-highlight [value]="preset.name" [ranges]="match.ranges" />
+                <ccc-match-highlight [value]="preset.name" [ranges]="match.ranges" />
               } @else {
                 {{ preset.name }}
               }
             </h2>
             <p class="browse__spec">{{ preset.spec }}</p>
-          </cp-card>
+          </ccc-card>
         </li>
       } @empty {
         <li class="browse__status">No presets match your search.</li>
