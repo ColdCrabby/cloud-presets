@@ -1,12 +1,12 @@
 import { createServer } from 'node:http';
 
 // A tiny, dependency-free stand-in for the Go/Huma API. It serves canned data
-// shaped like the stub OpenAPI document so both frontends can build and serve
-// end-to-end before the real API skeleton (issue #3) lands. It is NOT a spec
+// shaped like the sample OpenAPI document so both frontends can build and serve
+// end-to-end before the real API is complete. It is NOT a spec
 // validator and deliberately holds only a handful of presets.
 
-const PORT = Number(process.env.STUB_API_PORT ?? 8787);
-const REVISION = 'stub-0001';
+const PORT = Number(process.env.SAMPLE_API_PORT ?? 8787);
+const REVISION = 'sample-0001';
 
 /** @type {Array<Record<string, unknown>>} */
 const PRESETS = [
@@ -141,7 +141,7 @@ const server = createServer((req, res) => {
   }
 
   if (path === '/v1/vendor/presets') {
-    // The stub does not verify JWTs; it just returns Prusa's presets as a demo scope.
+    // The sample API does not verify JWTs; it just returns Prusa's presets as a demo scope.
     return send(
       res,
       200,
@@ -158,5 +158,5 @@ const server = createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`[stub-api] listening on http://localhost:${PORT} (revision ${REVISION})`);
+  console.log(`[sample-api] listening on http://localhost:${PORT} (revision ${REVISION})`);
 });

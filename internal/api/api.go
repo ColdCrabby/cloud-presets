@@ -57,6 +57,7 @@ func handleMe(w http.ResponseWriter, r *http.Request) {
 // the OpenAPI export command produce an identical spec.
 func Register(api huma.API, holder *catalog.Holder) {
 	registerHealth(api, holder)
+	registerPresets(api, holder)
 }
 
 // Config returns the Huma config used for both the server and the OpenAPI

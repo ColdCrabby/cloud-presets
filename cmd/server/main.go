@@ -78,21 +78,21 @@ func main() {
 //
 //	PUBLIC_DEV_URL   proxy /        to the public app's dev server
 //	VENDOR_DEV_URL   proxy /vendor/ to the vendor app's dev server
-//	STUB_API_URL     proxy /v1/     to the stub API (dev sample data)
+//	SAMPLE_API_URL   proxy /v1/     to the sample API (dev sample data)
 func withFrontends(apiHandler http.Handler) http.Handler {
 	publicDir := envOr("PUBLIC_DIR", defaultPublicDir)
 	vendorDir := envOr("VENDOR_DIR", defaultVendorDir)
 	publicDev := os.Getenv("PUBLIC_DEV_URL")
 	vendorDev := os.Getenv("VENDOR_DEV_URL")
-	stubAPI := os.Getenv("STUB_API_URL")
+	sampleAPI := os.Getenv("SAMPLE_API_URL")
 
 	mux := http.NewServeMux()
 
-	// API: an in-process handler in production; in dev, optionally the stub API
+	// API: an in-process handler in production; in dev, optionally the sample API
 	// so the catalog has sample data before ingest is wired up.
-	if stubAPI != "" {
-		log.Printf("frontends(dev): proxying %s/ to stub API %s", api.BasePath, stubAPI)
-		mux.Handle(api.BasePath+"/", devProxy(stubAPI))
+	if sampleAPI != "" {
+		log.Printf("frontends(dev): proxying %s/ to sample API %s", api.BasePath, sampleAPI)
+		mux.Handle(api.BasePath+"/", devProxy(sampleAPI))
 	} else {
 		mux.Handle(api.BasePath+"/", apiHandler)
 	}
@@ -126,8 +126,8 @@ func withFrontends(apiHandler http.Handler) http.Handler {
 	return mux
 }
 
-// devProxy reverse-proxies to a local dev server (a Vite dev server or the stub
-// API). It rewrites the Host header to the target so Vite accepts the request,
+// devProxy reverse-proxies to a local dev server (a Vite dev server or the
+// sample API). It rewrites the Host header to the target so Vite accepts the request,
 // and httputil handles the WebSocket upgrade that HMR rides on.
 func devProxy(target string) http.Handler {
 	u, err := url.Parse(target)

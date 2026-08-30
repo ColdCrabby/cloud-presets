@@ -113,7 +113,7 @@ cloud-presets/
 │   ├── ui/               # shared Angular UI primitives
 │   └── api-client/       # OpenAPI client generated for both apps
 ├── openapi/              # spec the frontend client is currently generated from (see docs/frontends.md)
-├── tools/stub-api/       # dependency-free stand-in for the Go API, for frontend dev
+├── tools/sample-api/     # dependency-free stand-in for the Go API, for frontend dev
 └── docs/
 ```
 

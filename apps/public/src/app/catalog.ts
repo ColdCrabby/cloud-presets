@@ -23,7 +23,8 @@ export class Catalog {
     const q = query.trim();
     const { data, error } = await searchPresets({ query: q ? { q } : {} });
     if (error) {
-      this._error.set('Search failed. Is the stub API running?');
+      const detail = (error as { detail?: string }).detail;
+      this._error.set(detail ?? 'Search is temporarily unavailable. Please try again.');
       this._results.set([]);
     } else {
       this._results.set(data?.results ?? []);

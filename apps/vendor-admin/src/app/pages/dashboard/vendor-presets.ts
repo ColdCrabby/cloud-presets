@@ -17,7 +17,8 @@ export class VendorPresets {
     this._error.set(null);
     const { data, error } = await listVendorPresets();
     if (error) {
-      this._error.set('Could not load your presets. Is the stub API running?');
+      const detail = (error as { detail?: string }).detail;
+      this._error.set(detail ?? 'Could not load your presets. Please try again.');
       this._items.set([]);
     } else {
       this._items.set(data ?? []);

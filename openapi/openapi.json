@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Cloud Presets API",
-    "version": "0.1.0-stub",
-    "description": "Stub OpenAPI 3.1 document derived from docs/api-surface.md. Replaced by the Huma-generated spec once the API skeleton (issue #3) exports it; the frontends regenerate their client from that file with `pnpm gen:client`."
+    "version": "0.1.0-sample",
+    "description": "Sample OpenAPI 3.1 document derived from docs/api-surface.md, replaced by the Huma-generated spec once the API exports it; the frontends regenerate their client from that file with `pnpm gen:client`."
   },
   "servers": [{ "url": "/" }],
   "tags": [{ "name": "public" }, { "name": "vendor" }, { "name": "ops" }],

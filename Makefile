@@ -19,7 +19,7 @@ run:
 
 ## dev: one unified dev origin (http://localhost:5200) mirroring the deployment.
 ## The Go server reverse-proxies the public app (/), vendor app (/vendor/) and
-## the stub API (/v1) to their dev servers. See tools/dev.mjs.
+## the sample API (/v1) to their dev servers. See tools/dev.mjs.
 dev:
 	$(PNPM) dev
 

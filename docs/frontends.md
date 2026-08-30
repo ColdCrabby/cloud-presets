@@ -17,7 +17,7 @@ packages/
 openapi/
   openapi.json    # the spec the client is generated from
 tools/
-  stub-api/       # dependency-free stand-in for the Go API
+  sample-api/     # dependency-free stand-in for the Go API
   sync-ui.sh      # clone/update the vendored @coldcrabby/ui checkout
 ```
 
@@ -85,7 +85,7 @@ Run from the repository root:
 `pnpm dev` (also `make dev`) stands up the whole stack behind a **single origin
 that mirrors the deployment**: the Go server at `http://localhost:5200` serves
 the public app at `/`, the vendor-admin app at `/vendor/`, and the API at `/v1`
-(proxied to the stub API for sample data). Saving a file rebuilds that app and
+(proxied to the sample API for sample data). Saving a file rebuilds that app and
 the page reloads.
 
 ```
@@ -97,7 +97,7 @@ the public header's **Vendor login** goes to `/vendor/`, the vendor header's
 **Back to catalog** goes to `/` (configurable via each app's
 `environment.{vendorUrl,publicUrl}`). Orchestration lives in
 [tools/dev.mjs](../tools/dev.mjs); the Go server's dev behaviour is env-driven
-(`PUBLIC_DIR`/`VENDOR_DIR`, `STUB_API_URL`, and the `*_DEV_URL` reverse-proxy
+(`PUBLIC_DIR`/`VENDOR_DIR`, `SAMPLE_API_URL`, and the `*_DEV_URL` reverse-proxy
 hooks) — see [cmd/server/main.go](../cmd/server/main.go).
 
 `pnpm dev` serves each app's **built** output rather than its Angular dev server:
@@ -120,8 +120,8 @@ so a spec change shows up as a reviewable diff in the frontends rather than as a
 invisible build-time difference. Do not edit generated files by hand; run
 `pnpm gen:client` instead.
 
-`openapi/openapi.json` is currently a **stub** derived from
-[`docs/api-surface.md`](./api-surface.md). The real Go API only serves
-`/v1/health` so far (the root `openapi.yaml`); once the remaining endpoints in
+`openapi/openapi.json` is currently a **sample** derived from
+[`docs/api-surface.md`](./api-surface.md). The real Go API serves
+`/v1/health` and `/v1/presets` so far (the root `openapi.yaml`); once the remaining endpoints in
 `docs/api-surface.md` are implemented, replace this file with that export and
 rerun `pnpm gen:client`.

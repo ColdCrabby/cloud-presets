@@ -1,6 +1,6 @@
 // Unified local dev: one clean URL that mirrors the deployment.
 //
-// Runs the stub API, an `ng build --watch` for each app, and the Go server —
+// Runs the sample API, an `ng build --watch` for each app, and the Go server —
 // which serves the two built apps under one origin (public at /, vendor-admin at
 // /vendor/) and the API at /v1, exactly like production. So http://localhost:5200
 // behaves like the deployed site; saving a file triggers a rebuild + reload.
@@ -12,7 +12,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
-const PORTS = { unified: 5200, stub: 8787 };
+const PORTS = { unified: 5200, sample: 8787 };
 const UNIFIED_URL = `http://localhost:${PORTS.unified}`;
 const DIST = {
   public: 'apps/public/dist/public/browser/index.html',
@@ -21,11 +21,11 @@ const DIST = {
 
 const goEnv = {
   ADDR: `:${PORTS.unified}`,
-  STUB_API_URL: `http://localhost:${PORTS.stub}`,
+  SAMPLE_API_URL: `http://localhost:${PORTS.sample}`,
 };
 
-const colors = { 'stub-api': 90, 'go-server': 36, public: 33, vendor: 35, dev: 32 };
-const width = Math.max(...['stub-api', 'go-server', 'public', 'vendor', 'dev'].map((l) => l.length));
+const colors = { 'sample-api': 90, 'go-server': 36, public: 33, vendor: 35, dev: 32 };
+const width = Math.max(...['sample-api', 'go-server', 'public', 'vendor', 'dev'].map((l) => l.length));
 
 const children = [];
 let shuttingDown = false;
@@ -84,7 +84,7 @@ process.on('SIGTERM', () => shutdown(0));
 
 process.stdout.write(`\n  Cold Crabby dev is starting — building the apps…\n\n`);
 
-start('stub-api', 'node', ['tools/stub-api/server.mjs']);
+start('sample-api', 'node', ['tools/sample-api/server.mjs']);
 start('public', 'pnpm', ['--filter', 'public', 'run', 'watch']);
 start('vendor', 'pnpm', ['--filter', 'vendor-admin', 'run', 'watch']);
 

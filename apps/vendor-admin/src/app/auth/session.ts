@@ -15,7 +15,7 @@ export interface Member {
  * When a real Stytch public token is configured it drives the prebuilt Consumer
  * login UI (email magic link + OAuth) and, once a session JWT exists, calls the
  * API's `/v1/me` to resolve the caller. With no token configured it falls back
- * to a stub so the UI still runs.
+ * to a sample session so the UI still runs.
  */
 @Injectable({ providedIn: 'root' })
 export class SessionStore {
@@ -46,7 +46,7 @@ export class SessionStore {
     }
   }
 
-  /** Mount the Stytch login UI into host. No-op in stub mode or during callback. */
+  /** Mount the Stytch login UI into host. No-op in sample mode or during callback. */
   mountLogin(host: HTMLElement): void {
     if (!this.stytch || this.mounted || this.callbackToken()) {
       return;
@@ -74,10 +74,10 @@ export class SessionStore {
     });
   }
 
-  /** Stub sign-in for when Stytch is not configured. */
+  /** Sample sign-in for when Stytch is not configured. */
   signIn(): void {
     this._member.set({
-      memberId: 'member-stub',
+      memberId: 'member-sample',
       organizationSlug: 'demo',
       roles: [],
     });
