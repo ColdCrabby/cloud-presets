@@ -9,12 +9,12 @@
   } @else if (draft(); as d) {
     <ccc-card heading="Review upload">
       <p class="claim__lead">
-        {{ d.files.length }} preset{{ d.files.length === 1 ? '' : 's' }} ready to submit. Review
+        {{ files().length }} preset{{ files().length === 1 ? '' : 's' }} ready to submit. Review
         them, then open a pull request against the presets repository.
       </p>
 
       <ul class="claim__files">
-        @for (file of d.files; track file.fileName) {
+        @for (file of files(); track file.fileName) {
           <li class="claim__file">
             <header class="claim__file-head">
               <span class="claim__badge">{{ file.kind }}</span>
@@ -40,7 +40,7 @@
         } @else {
           <p class="claim__status">{{ r.message }}</p>
           <ul class="claim__paths">
-            @for (path of r.files; track path) {
+            @for (path of resultPaths(); track path) {
               <li>
                 <code>{{ path }}</code>
               </li>

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ColdCrabby/cloud-presets/internal/auth"
 	"github.com/ColdCrabby/cloud-presets/internal/catalog"
 	"github.com/ColdCrabby/cloud-presets/internal/preset"
 	"github.com/ColdCrabby/cloud-presets/internal/submit"
@@ -66,15 +67,15 @@ func newUploadServer(t *testing.T, sub submit.Submitter) (*httptest.Server, *upl
 	return srv, store
 }
 
-// uploadForm builds a multipart body. Each part maps a form field name to a
-// (fileName, content) pair; the file name matters because the validator enforces
-// file-name-equals-id.
-func uploadForm(t *testing.T, parts map[string][2]string) (*bytes.Buffer, string) {
+// uploadForm builds a multipart body with every preset under the single "files"
+// field the operation expects. Each element is a (fileName, content) pair; the
+// file name matters because the validator enforces file-name-equals-id.
+func multipartFiles(t *testing.T, files ...[2]string) (*bytes.Buffer, string) {
 	t.Helper()
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
-	for field, fc := range parts {
-		w, err := mw.CreateFormFile(field, fc[0])
+	for _, fc := range files {
+		w, err := mw.CreateFormFile("files", fc[0])
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -86,15 +87,15 @@ func uploadForm(t *testing.T, parts map[string][2]string) (*bytes.Buffer, string
 
 func TestUploadStoresDraftAndReturnsClaimURL(t *testing.T) {
 	srv, store := newUploadServer(t, nil)
-	body, ct := uploadForm(t, map[string][2]string{"printer": {"prusa-mk4-0.4.yaml", validPrinterYAML}})
+	body, ct := multipartFiles(t, [2]string{"prusa-mk4-0.4.yaml", validPrinterYAML})
 
-	resp, err := http.Post(srv.URL+"/v1/uploads", ct, body)
+	resp, err := http.Post(srv.URL+"/v1/uploads?type=printer", ct, body)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
-		t.Fatalf("status = %d, want 201", resp.StatusCode)
+		t.Fatalf("status = %d, want 201; body=%s", resp.StatusCode, readBody(resp))
 	}
 	var out struct {
 		ID       string `json:"id"`
@@ -120,9 +121,9 @@ func TestUploadStoresDraftAndReturnsClaimURL(t *testing.T) {
 
 func TestUploadRejectsInvalidPreset(t *testing.T) {
 	srv, _ := newUploadServer(t, nil)
-	body, ct := uploadForm(t, map[string][2]string{"printer": {"NOPE.yaml", "schema_version: 1\nid: NOPE\n"}})
+	body, ct := multipartFiles(t, [2]string{"NOPE.yaml", "schema_version: 1\nid: NOPE\n"})
 
-	resp, err := http.Post(srv.URL+"/v1/uploads", ct, body)
+	resp, err := http.Post(srv.URL+"/v1/uploads?type=printer", ct, body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,23 +136,28 @@ func TestUploadRejectsInvalidPreset(t *testing.T) {
 	}
 }
 
-func TestUploadRedirectsWhenAsked(t *testing.T) {
-	srv, _ := newUploadServer(t, nil)
-	body, ct := uploadForm(t, map[string][2]string{"printer": {"prusa-mk4-0.4.yaml", validPrinterYAML}})
+func TestUploadInfersKindFromZipLayout(t *testing.T) {
+	srv, store := newUploadServer(t, nil)
 
-	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error {
-		return http.ErrUseLastResponse
-	}}
-	resp, err := client.Post(srv.URL+"/v1/uploads?redirect=1", ct, body)
+	var zbuf bytes.Buffer
+	zw := zip.NewWriter(&zbuf)
+	w, _ := zw.Create("printers/prusa-mk4-0.4.yaml")
+	_, _ = w.Write([]byte(validPrinterYAML))
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	body, ct := zipUpload(t, "presets.zip", zbuf.Bytes())
+	resp, err := http.Post(srv.URL+"/v1/uploads", ct, body)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusSeeOther {
-		t.Fatalf("status = %d, want 303", resp.StatusCode)
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("status = %d, want 201; body=%s", resp.StatusCode, readBody(resp))
 	}
-	if loc := resp.Header.Get("Location"); !strings.HasPrefix(loc, "/vendor/claim/") {
-		t.Fatalf("Location = %q, want /vendor/claim/...", loc)
+	if store.Len() != 1 {
+		t.Fatalf("store holds %d drafts, want 1", store.Len())
 	}
 }
 
@@ -159,7 +165,6 @@ func TestClaimOpensPullRequest(t *testing.T) {
 	sub := &fakeSubmitter{slug: "prusa", result: submit.Result{URL: "https://github.com/x/y/pull/1", Branch: "b"}}
 	srv, store := newUploadServer(t, sub)
 
-	// Seed a draft directly through the store.
 	d, err := store.Create([]upload.File{{
 		Kind: preset.KindPrinter, ID: "prusa-mk4-0.4", Name: "Prusa MK4",
 		Vendor: "Prusa", FileName: "prusa-mk4-0.4.yaml", Content: []byte(validPrinterYAML),
@@ -174,7 +179,7 @@ func TestClaimOpensPullRequest(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status = %d, want 200", resp.StatusCode)
+		t.Fatalf("status = %d, want 200; body=%s", resp.StatusCode, readBody(resp))
 	}
 	var out struct {
 		PRCreated      bool   `json:"prCreated"`
@@ -209,7 +214,7 @@ func TestClaimWithoutSubmitterFallsBack(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status = %d, want 200", resp.StatusCode)
+		t.Fatalf("status = %d, want 200; body=%s", resp.StatusCode, readBody(resp))
 	}
 	var out struct {
 		PRCreated bool   `json:"prCreated"`
@@ -242,7 +247,6 @@ func TestClaimRejectsProcessPreset(t *testing.T) {
 func TestUploadZipEnforcesFileCap(t *testing.T) {
 	srv, store := newUploadServer(t, nil)
 
-	// Build a zip with more valid presets than the cap allows.
 	var zbuf bytes.Buffer
 	zw := zip.NewWriter(&zbuf)
 	for i := 0; i < maxDraftFiles+5; i++ {
@@ -257,13 +261,8 @@ func TestUploadZipEnforcesFileCap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var body bytes.Buffer
-	mw := multipart.NewWriter(&body)
-	fw, _ := mw.CreateFormFile("archive", "presets.zip")
-	_, _ = fw.Write(zbuf.Bytes())
-	_ = mw.Close()
-
-	resp, err := http.Post(srv.URL+"/v1/uploads", mw.FormDataContentType(), &body)
+	body, ct := zipUpload(t, "presets.zip", zbuf.Bytes())
+	resp, err := http.Post(srv.URL+"/v1/uploads", ct, body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,4 +285,82 @@ func TestClaimUnknownDraftIs404(t *testing.T) {
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", resp.StatusCode)
 	}
+}
+
+// TestClaimRequiresAuthWhenMiddlewarePresent exercises the Stytch→Huma auth
+// adapter: with a middleware configured, a claim carrying no (or an invalid)
+// session token is rejected with 401 before any draft work happens.
+func TestClaimRequiresAuthWhenMiddlewarePresent(t *testing.T) {
+	// An empty JWKS is a valid key set with no keys, so the verifier constructs
+	// offline and rejects every token — enough to prove the gate fires.
+	jwks := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"keys":[]}`))
+	}))
+	t.Cleanup(jwks.Close)
+
+	verifier, err := auth.New(context.Background(), auth.Config{
+		ProjectID: "project-test",
+		JWKSURL:   jwks.URL,
+	})
+	if err != nil {
+		t.Fatalf("auth.New: %v", err)
+	}
+	mw := auth.NewMiddleware(verifier)
+
+	v, err := preset.New()
+	if err != nil {
+		t.Fatalf("preset.New: %v", err)
+	}
+	store := upload.NewStore(0)
+	_, handler := New(catalog.NewHolder(), mw, WithUploads(v, store, &fakeSubmitter{slug: "prusa"}))
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+
+	for _, tc := range []struct {
+		name  string
+		token string
+	}{
+		{name: "no token", token: ""},
+		{name: "garbage token", token: "not-a-jwt"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req, _ := http.NewRequest(http.MethodPost, srv.URL+"/v1/uploads/whatever/claim", strings.NewReader("{}"))
+			req.Header.Set("Content-Type", "application/json")
+			if tc.token != "" {
+				req.Header.Set("Authorization", "Bearer "+tc.token)
+			}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusUnauthorized {
+				t.Fatalf("status = %d, want 401", resp.StatusCode)
+			}
+			if wa := resp.Header.Get("WWW-Authenticate"); !strings.Contains(wa, "invalid_token") {
+				t.Errorf("WWW-Authenticate = %q, want it to mention invalid_token", wa)
+			}
+		})
+	}
+}
+
+// zipUpload wraps zip bytes in a multipart body under the "files" field.
+func zipUpload(t *testing.T, name string, content []byte) (*bytes.Buffer, string) {
+	t.Helper()
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	fw, err := mw.CreateFormFile("files", name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = fw.Write(content)
+	_ = mw.Close()
+	return &body, mw.FormDataContentType()
+}
+
+func readBody(resp *http.Response) string {
+	var b bytes.Buffer
+	_, _ = b.ReadFrom(resp.Body)
+	return b.String()
 }

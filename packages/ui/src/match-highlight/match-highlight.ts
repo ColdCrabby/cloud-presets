@@ -21,7 +21,15 @@ import { matchSegments, type MatchRange } from './match-segments';
 })
 export class MatchHighlight {
   readonly value = input.required<string>();
-  readonly ranges = input<readonly MatchRange[]>([]);
+  // The API models ranges as an optional, nullable array with nullable entries
+  // (a result may carry no match, or sparse ranges). Accept that shape directly
+  // and normalise, so callers can bind the generated client's type as-is.
+  readonly ranges = input<readonly (MatchRange | null)[] | null | undefined>([]);
 
-  protected readonly segments = computed(() => matchSegments(this.value(), this.ranges()));
+  protected readonly segments = computed(() =>
+    matchSegments(
+      this.value(),
+      (this.ranges() ?? []).filter((r): r is MatchRange => r != null),
+    ),
+  );
 }

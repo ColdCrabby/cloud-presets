@@ -281,15 +281,15 @@ handful of YAML files — this is the manual equivalent of the slicer hand-off.
 The shape is the same **upload, then claim** flow: park the files under an
 unguessable id, then let the admin app load them back to review and submit.
 
-`POST /v1/uploads` accepts a multipart form carrying either a `.zip` laid out
-like the repository (`printers/…`, `filaments/…`, `processes/…`) or individual
-preset files. A bare file's kind comes from its form field name
-(`printer`/`filament`) or a `type` field; a zip's kind comes from each entry's
-path. Every file is validated against the **same pinned schemas** as CI and
-ingest before it is parked, so an invalid upload fails fast with structured,
-per-file errors rather than being discovered at claim time. On success the
-endpoint returns the draft id and a `claimUrl`, or — with `?redirect=1` or a
-browser form post — a `303` to that URL in the admin app.
+`POST /v1/uploads` accepts a multipart form (`files`) carrying either a `.zip`
+laid out like the repository (`printers/…`, `filaments/…`, `processes/…`) or
+individual preset files. A bare file's kind comes from its name (a `printers/`
+or `filaments/` path) or the `type` query parameter; a zip's kind comes from
+each entry's path. Every file is validated against the **same pinned schemas**
+as CI and ingest before it is parked, so an invalid upload fails fast with
+structured, per-file errors rather than being discovered at claim time. On
+success the endpoint returns the draft id, the parsed files, and a `claimUrl`
+into the admin app.
 
 The parked draft is **ephemeral, in-memory, and TTL-bounded**: it is not a
 database, it does not survive a restart, and it is dropped after roughly half an
@@ -309,6 +309,12 @@ shared `processes/` namespace is not writable through the API. Claiming consumes
 the draft. When the bot is not configured (local dev), the claim still resolves
 and validates the change set and reports the target paths, but opens no pull
 request.
+
+Unlike the slicer hand-off, all three are ordinary typed operations in the
+OpenAPI document, so the frontends call them through the generated client. The
+claim's Stytch requirement is enforced by the same offline JWT validation as the
+other vendor endpoints, applied as operation middleware rather than a wrapping
+handler.
 
 ---
 

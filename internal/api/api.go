@@ -61,7 +61,7 @@ func New(holder *catalog.Holder, mw *auth.Middleware, opts ...Option) (huma.API,
 	if mw != nil {
 		mux.Handle("GET "+BasePath+"/me", mw.RequireAuth(http.HandlerFunc(handleMe)))
 	}
-	registerUploads(mux, mw, deps)
+	registerUploads(humaAPI, mw, deps)
 	return humaAPI, &problemRouter{mux: mux}
 }
 

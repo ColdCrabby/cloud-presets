@@ -4,206 +4,394 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
-export type PresetType = 'printer' | 'filament' | 'process';
-
-/**
- * A [start, end) pair of UTF-16 code-unit offsets into the original field value.
- */
-export type MatchRange = [number, number];
-
-/**
- * Which field matched the query and where, so the client can highlight it.
- */
-export type MatchInfo = {
-  field: string;
-  ranges: Array<MatchRange>;
+export type ClaimBody = {
+  /**
+   * A URL to the JSON Schema for this object.
+   */
+  readonly $schema?: string;
+  /**
+   * Vendor slug to attribute the change to (dev only; ignored when the GitHub bot is configured).
+   */
+  vendor?: string;
 };
 
-/**
- * Enough to render a result row without shipping every slicing parameter.
- */
-export type PresetSummary = {
-  id: string;
-  type: PresetType;
-  name: string;
+export type ClaimOutputBody = {
+  /**
+   * A URL to the JSON Schema for this object.
+   */
+  readonly $schema?: string;
+  /**
+   * True when an idempotent retry returned an existing pull request.
+   */
+  alreadyExisted?: boolean;
+  /**
+   * Head branch the change was committed to.
+   */
+  branch?: string;
+  /**
+   * Always true on success.
+   */
+  claimed: boolean;
+  /**
+   * Repository paths the presets were placed at.
+   */
+  files: Array<string> | null;
+  /**
+   * Human-readable note, e.g. when no pull request was opened.
+   */
+  message?: string;
+  /**
+   * Whether a pull request was opened (false in dev without the bot).
+   */
+  prCreated: boolean;
+  /**
+   * URL of the opened pull request, when one was created.
+   */
+  pullRequestUrl?: string;
+  /**
+   * Vendor slug the change was attributed to.
+   */
   vendor: string;
-  model?: string | null;
-  material?: string | null;
-  /**
-   * A short human-readable spec string.
-   */
-  spec: string;
-  match?: MatchInfo;
 };
 
-export type SearchResponse = {
-  results: Array<PresetSummary>;
+export type DraftFileView = {
   /**
-   * Opaque continuation token; absent on the last page.
+   * The original, unmodified uploaded YAML.
    */
-  next_cursor?: string | null;
+  content: string;
   /**
-   * Catalog revision the page was served from.
+   * Leaf file name the preset is stored as (<id>.yaml).
    */
-  revision?: string;
-};
-
-/**
- * The complete preset in the slicer's profile shape.
- */
-export type Preset = {
+  fileName: string;
+  /**
+   * Preset id declared in the file body.
+   */
   id: string;
-  type: PresetType;
+  /**
+   * Preset category: printer, filament, or process.
+   */
+  kind: string;
+  /**
+   * Human-readable preset name.
+   */
   name: string;
-  vendor: string;
-  source: 'catalog';
-  import_url: string;
-  params: {
-    [key: string]: unknown;
-  };
+  /**
+   * Vendor string declared in the body, when applicable.
+   */
+  vendor?: string;
 };
 
-export type Vendor = {
-  slug: string;
-  display_name: string;
-  brands: Array<string>;
-  website?: string | null;
-};
-
-export type Health = {
-  ready: boolean;
-  revision?: string | null;
-  last_ingest_at?: string | null;
-};
-
-export type ProblemError = {
-  location: string;
-  message: string;
+export type ErrorDetail = {
+  /**
+   * Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id'
+   */
+  location?: string;
+  /**
+   * Error message text
+   */
+  message?: string;
+  /**
+   * The value at the given location
+   */
   value?: unknown;
 };
 
-/**
- * RFC 9457 problem details.
- */
-export type Problem = {
-  type?: string;
-  title?: string;
-  status?: number;
+export type ErrorModel = {
+  /**
+   * A URL to the JSON Schema for this object.
+   */
+  readonly $schema?: string;
+  /**
+   * A human-readable explanation specific to this occurrence of the problem.
+   */
   detail?: string;
-  errors?: Array<ProblemError>;
-};
-
-export type SearchPresetsData = {
-  body?: never;
-  path?: never;
-  query?: {
-    /**
-     * Fuzzy query across name, vendor, model, material. Omit to browse.
-     */
-    q?: string;
-    type?: PresetType;
-    vendor?: string;
-    material?: string;
-    limit?: number;
-    cursor?: string;
-  };
-  url: '/v1/presets';
-};
-
-export type SearchPresetsErrors = {
   /**
-   * RFC 9457 problem details.
+   * Optional list of individual error details
    */
-  409: Problem;
-};
-
-export type SearchPresetsError = SearchPresetsErrors[keyof SearchPresetsErrors];
-
-export type SearchPresetsResponses = {
+  errors?: Array<ErrorDetail> | null;
   /**
-   * A page of preset summaries.
+   * A URI reference that identifies the specific occurrence of the problem.
    */
-  200: SearchResponse;
-};
-
-export type SearchPresetsResponse = SearchPresetsResponses[keyof SearchPresetsResponses];
-
-export type GetPresetData = {
-  body?: never;
-  path: {
-    id: string;
-  };
-  query?: never;
-  url: '/v1/presets/{id}';
-};
-
-export type GetPresetErrors = {
+  instance?: string;
   /**
-   * RFC 9457 problem details.
+   * HTTP status code
    */
-  404: Problem;
+  status?: number;
   /**
-   * RFC 9457 problem details.
+   * A short, human-readable summary of the problem type. This value should not change between occurrences of the error.
    */
-  410: Problem;
-};
-
-export type GetPresetError = GetPresetErrors[keyof GetPresetErrors];
-
-export type GetPresetResponses = {
+  title?: string;
   /**
-   * The complete preset.
+   * A URI reference to human-readable documentation for the error.
    */
-  200: Preset;
+  type?: string;
 };
 
-export type GetPresetResponse = GetPresetResponses[keyof GetPresetResponses];
-
-export type ListVendorsData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: '/v1/vendors';
-};
-
-export type ListVendorsResponses = {
+export type GetUploadOutputBody = {
   /**
-   * All known vendors.
+   * A URL to the JSON Schema for this object.
    */
-  200: Array<Vendor>;
+  readonly $schema?: string;
+  createdAt: string;
+  expiresAt: string;
+  files: Array<DraftFileView> | null;
+  id: string;
 };
 
-export type ListVendorsResponse = ListVendorsResponses[keyof ListVendorsResponses];
-
-export type ListVendorPresetsData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: '/v1/vendor/presets';
-};
-
-export type ListVendorPresetsErrors = {
+export type HealthResponseBody = {
   /**
-   * RFC 9457 problem details.
+   * A URL to the JSON Schema for this object.
    */
-  401: Problem;
+  readonly $schema?: string;
   /**
-   * RFC 9457 problem details.
+   * Time of the last successful ingest, or null until the first ingest.
    */
-  403: Problem;
+  lastIngestAt: string | null;
+  /**
+   * True once a catalog has been loaded. False until the first successful ingest.
+   */
+  ready: boolean;
+  /**
+   * Git commit SHA of the served catalog, or null until the first ingest.
+   */
+  revision: string | null;
+  /**
+   * Liveness marker; always "ok" when the process can respond.
+   */
+  status: string;
 };
 
-export type ListVendorPresetsError = ListVendorPresetsErrors[keyof ListVendorPresetsErrors];
-
-export type ListVendorPresetsResponses = {
+export type MatchInfo = {
   /**
-   * The presets the caller's organization owns.
+   * Name of the field the query matched.
    */
-  200: Array<PresetSummary>;
+  field: string;
+  /**
+   * Offsets within the field value that matched.
+   */
+  ranges: Array<[number, number] | null> | null;
 };
 
-export type ListVendorPresetsResponse =
-  ListVendorPresetsResponses[keyof ListVendorPresetsResponses];
+export type PresetSummary = {
+  /**
+   * Stable identifier of the preset.
+   */
+  id: string;
+  /**
+   * Where the query matched, for highlighting.
+   */
+  match?: MatchInfo;
+  /**
+   * Filament material, when applicable.
+   */
+  material?: string;
+  /**
+   * Printer model, when applicable.
+   */
+  model?: string;
+  /**
+   * Human-readable preset name.
+   */
+  name: string;
+  /**
+   * Short human-readable spec string.
+   */
+  spec: string;
+  /**
+   * Kind of profile the preset describes.
+   */
+  type: 'printer' | 'filament' | 'process';
+  /**
+   * Vendor slug the preset belongs to.
+   */
+  vendor: string;
+};
+
+export type SearchResponseBody = {
+  /**
+   * A URL to the JSON Schema for this object.
+   */
+  readonly $schema?: string;
+  /**
+   * Continuation token; absent on the last page.
+   */
+  next_cursor?: string;
+  /**
+   * The page of matching preset summaries.
+   */
+  results: Array<PresetSummary> | null;
+  /**
+   * Catalog revision the page was served from.
+   */
+  revision: string;
+};
+
+export type UploadOutputBody = {
+  /**
+   * A URL to the JSON Schema for this object.
+   */
+  readonly $schema?: string;
+  /**
+   * Admin app path to review and claim the draft.
+   */
+  claimUrl: string;
+  /**
+   * When the draft is garbage-collected if unclaimed.
+   */
+  expiresAt: string;
+  /**
+   * The validated preset files in the draft.
+   */
+  files: Array<DraftFileView> | null;
+  /**
+   * Unguessable id of the parked draft.
+   */
+  id: string;
+};
+
+export type Vendor = {
+  /**
+   * Human-readable vendor name.
+   */
+  display_name: string;
+  /**
+   * Stable vendor slug, matching the vendor.yaml directory name.
+   */
+  slug: string;
+  /**
+   * Vendor website, when the manifest declares one.
+   */
+  website?: string;
+};
+
+export type ClaimBodyWritable = {
+  /**
+   * Vendor slug to attribute the change to (dev only; ignored when the GitHub bot is configured).
+   */
+  vendor?: string;
+};
+
+export type ClaimOutputBodyWritable = {
+  /**
+   * True when an idempotent retry returned an existing pull request.
+   */
+  alreadyExisted?: boolean;
+  /**
+   * Head branch the change was committed to.
+   */
+  branch?: string;
+  /**
+   * Always true on success.
+   */
+  claimed: boolean;
+  /**
+   * Repository paths the presets were placed at.
+   */
+  files: Array<string> | null;
+  /**
+   * Human-readable note, e.g. when no pull request was opened.
+   */
+  message?: string;
+  /**
+   * Whether a pull request was opened (false in dev without the bot).
+   */
+  prCreated: boolean;
+  /**
+   * URL of the opened pull request, when one was created.
+   */
+  pullRequestUrl?: string;
+  /**
+   * Vendor slug the change was attributed to.
+   */
+  vendor: string;
+};
+
+export type ErrorModelWritable = {
+  /**
+   * A human-readable explanation specific to this occurrence of the problem.
+   */
+  detail?: string;
+  /**
+   * Optional list of individual error details
+   */
+  errors?: Array<ErrorDetail> | null;
+  /**
+   * A URI reference that identifies the specific occurrence of the problem.
+   */
+  instance?: string;
+  /**
+   * HTTP status code
+   */
+  status?: number;
+  /**
+   * A short, human-readable summary of the problem type. This value should not change between occurrences of the error.
+   */
+  title?: string;
+  /**
+   * A URI reference to human-readable documentation for the error.
+   */
+  type?: string;
+};
+
+export type GetUploadOutputBodyWritable = {
+  createdAt: string;
+  expiresAt: string;
+  files: Array<DraftFileView> | null;
+  id: string;
+};
+
+export type HealthResponseBodyWritable = {
+  /**
+   * Time of the last successful ingest, or null until the first ingest.
+   */
+  lastIngestAt: string | null;
+  /**
+   * True once a catalog has been loaded. False until the first successful ingest.
+   */
+  ready: boolean;
+  /**
+   * Git commit SHA of the served catalog, or null until the first ingest.
+   */
+  revision: string | null;
+  /**
+   * Liveness marker; always "ok" when the process can respond.
+   */
+  status: string;
+};
+
+export type SearchResponseBodyWritable = {
+  /**
+   * Continuation token; absent on the last page.
+   */
+  next_cursor?: string;
+  /**
+   * The page of matching preset summaries.
+   */
+  results: Array<PresetSummary> | null;
+  /**
+   * Catalog revision the page was served from.
+   */
+  revision: string;
+};
+
+export type UploadOutputBodyWritable = {
+  /**
+   * Admin app path to review and claim the draft.
+   */
+  claimUrl: string;
+  /**
+   * When the draft is garbage-collected if unclaimed.
+   */
+  expiresAt: string;
+  /**
+   * The validated preset files in the draft.
+   */
+  files: Array<DraftFileView> | null;
+  /**
+   * Unguessable id of the parked draft.
+   */
+  id: string;
+};
 
 export type GetHealthData = {
   body?: never;
@@ -214,18 +402,197 @@ export type GetHealthData = {
 
 export type GetHealthErrors = {
   /**
-   * RFC 9457 problem details.
+   * Error
    */
-  503: Problem;
+  default: ErrorModel;
 };
 
 export type GetHealthError = GetHealthErrors[keyof GetHealthErrors];
 
 export type GetHealthResponses = {
   /**
-   * Health report.
+   * OK
    */
-  200: Health;
+  200: HealthResponseBody;
 };
 
 export type GetHealthResponse = GetHealthResponses[keyof GetHealthResponses];
+
+export type SearchPresetsData = {
+  body?: never;
+  path?: never;
+  query?: {
+    /**
+     * Fuzzy query across name, vendor, model, material. Omit to browse.
+     */
+    q?: string;
+    /**
+     * Restrict to one preset type.
+     */
+    type?: 'printer' | 'filament' | 'process';
+    /**
+     * Restrict to one vendor slug.
+     */
+    vendor?: string;
+    /**
+     * Restrict to one filament material.
+     */
+    material?: string;
+    /**
+     * Maximum results to return (bounded server-side).
+     */
+    limit?: number;
+    /**
+     * Opaque continuation token from a previous page.
+     */
+    cursor?: string;
+  };
+  url: '/v1/presets';
+};
+
+export type SearchPresetsErrors = {
+  /**
+   * Conflict
+   */
+  409: ErrorModel;
+  /**
+   * Unprocessable Entity
+   */
+  422: ErrorModel;
+  /**
+   * Internal Server Error
+   */
+  500: ErrorModel;
+  /**
+   * Service Unavailable
+   */
+  503: ErrorModel;
+};
+
+export type SearchPresetsError = SearchPresetsErrors[keyof SearchPresetsErrors];
+
+export type SearchPresetsResponses = {
+  /**
+   * OK
+   */
+  200: SearchResponseBody;
+};
+
+export type SearchPresetsResponse = SearchPresetsResponses[keyof SearchPresetsResponses];
+
+export type UploadPresetsData = {
+  body?: {
+    files: Array<Blob | File>;
+  };
+  path?: never;
+  query?: {
+    /**
+     * Default preset type for bare files whose name does not encode one (printers/ or filaments/). Ignored for zip entries, whose kind comes from their path.
+     */
+    type?: 'printer' | 'filament';
+  };
+  url: '/v1/uploads';
+};
+
+export type UploadPresetsErrors = {
+  /**
+   * Error
+   */
+  default: ErrorModel;
+};
+
+export type UploadPresetsError = UploadPresetsErrors[keyof UploadPresetsErrors];
+
+export type UploadPresetsResponses = {
+  /**
+   * Created
+   */
+  201: UploadOutputBody;
+};
+
+export type UploadPresetsResponse = UploadPresetsResponses[keyof UploadPresetsResponses];
+
+export type GetUploadData = {
+  body?: never;
+  path: {
+    /**
+     * Draft id returned by POST /v1/uploads.
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/v1/uploads/{id}';
+};
+
+export type GetUploadErrors = {
+  /**
+   * Error
+   */
+  default: ErrorModel;
+};
+
+export type GetUploadError = GetUploadErrors[keyof GetUploadErrors];
+
+export type GetUploadResponses = {
+  /**
+   * OK
+   */
+  200: GetUploadOutputBody;
+};
+
+export type GetUploadResponse = GetUploadResponses[keyof GetUploadResponses];
+
+export type ClaimUploadData = {
+  body?: ClaimBodyWritable;
+  path: {
+    /**
+     * Draft id to claim.
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/v1/uploads/{id}/claim';
+};
+
+export type ClaimUploadErrors = {
+  /**
+   * Error
+   */
+  default: ErrorModel;
+};
+
+export type ClaimUploadError = ClaimUploadErrors[keyof ClaimUploadErrors];
+
+export type ClaimUploadResponses = {
+  /**
+   * OK
+   */
+  200: ClaimOutputBody;
+};
+
+export type ClaimUploadResponse = ClaimUploadResponses[keyof ClaimUploadResponses];
+
+export type ListVendorsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/v1/vendors';
+};
+
+export type ListVendorsErrors = {
+  /**
+   * Error
+   */
+  default: ErrorModel;
+};
+
+export type ListVendorsError = ListVendorsErrors[keyof ListVendorsErrors];
+
+export type ListVendorsResponses = {
+  /**
+   * OK
+   */
+  200: Array<Vendor> | null;
+};
+
+export type ListVendorsResponse = ListVendorsResponses[keyof ListVendorsResponses];

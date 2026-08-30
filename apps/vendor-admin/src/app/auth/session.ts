@@ -33,12 +33,6 @@ export class SessionStore {
   readonly isAuthenticated = computed(() => this._member() !== null);
   readonly usesStytch = this.hasRealToken();
 
-  /** The current session JWT, or null when signed out. Used by direct fetch
-   *  calls (e.g. claiming an upload) that need the Authorization header. */
-  authToken(): string | null {
-    return this.sessionJwt;
-  }
-
   constructor() {
     setCloudPresetsAuthTokenProvider(() => this.sessionJwt);
 

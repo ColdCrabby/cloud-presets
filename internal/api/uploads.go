@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +14,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/ColdCrabby/cloud-presets/internal/auth"
 	ghapp "github.com/ColdCrabby/cloud-presets/internal/github"
@@ -26,48 +27,170 @@ import (
 // Upload limits. Drafts are held in memory and claimable by an unguessable id,
 // so the request body, the number of files, and the total decompressed size are
 // all bounded to keep an abandoned or hostile upload — including a zip bomb —
-// from consuming the process. These endpoints are unauthenticated, so the caps
-// are the only backstop.
+// from consuming the process. Upload and read are unauthenticated (the id is the
+// capability), so the caps are the only backstop there.
 const (
-	maxUploadBytes = 16 << 20 // 16 MiB per request (compressed, over the wire)
+	maxUploadBytes = 16 << 20 // 16 MiB per file (compressed, over the wire)
 	maxDraftBytes  = 64 << 20 // 64 MiB total decompressed across all files
 	maxDraftFiles  = 500      // files per upload, including zip entries
 	claimPathBase  = "/vendor/claim/"
 )
 
 // uploadDeps are the collaborators the upload/claim handlers need. They are
-// assembled by api.New from options so tests can supply fakes and the OpenAPI
-// export can omit them.
+// assembled by api.New from options; when the store is nil (the OpenAPI export,
+// or a deployment with the validator unavailable) the operations are still
+// registered so they appear in the spec, but every call returns 503.
 type uploadDeps struct {
 	validator *preset.Validator
 	store     *upload.Store
 	submitter submit.Submitter // nil when the GitHub bot is not configured
 }
 
-// registerUploads wires the manual upload and claim endpoints onto mux. These
-// are raw handlers rather than Huma operations because they deal in multipart
-// bodies and a redirect — shapes outside Huma's typed model — and mirror how
-// GET /v1/me is mounted. They therefore do not appear in the OpenAPI document;
-// the vendor app calls them with fetch, as it already does for /v1/me.
-//
-// The claim endpoint is gated by the auth middleware when one is configured, so
-// only a signed-in vendor can turn a parked draft into a pull request. Upload
-// and read are intentionally open: like the slicer hand-off, the id authorizes
-// nothing on its own, and authority is checked at claim time.
-func registerUploads(mux *http.ServeMux, mw *auth.Middleware, deps uploadDeps) {
-	if deps.store == nil {
-		return
+// DraftFileView is one uploaded preset as reported back to the client. Content
+// is included so the admin app can preview the exact YAML before claiming.
+type DraftFileView struct {
+	Kind     string `json:"kind" doc:"Preset category: printer, filament, or process."`
+	ID       string `json:"id" doc:"Preset id declared in the file body."`
+	Name     string `json:"name" doc:"Human-readable preset name."`
+	Vendor   string `json:"vendor,omitempty" doc:"Vendor string declared in the body, when applicable."`
+	FileName string `json:"fileName" doc:"Leaf file name the preset is stored as (<id>.yaml)."`
+	Content  string `json:"content" doc:"The original, unmodified uploaded YAML."`
+}
+
+// uploadForm is the multipart body of POST /v1/uploads: one or more preset files
+// under the repeated form field "files". A .zip laid out like the presets repo
+// is expanded server-side; bare YAML files take their kind from the file name or
+// the `type` query parameter.
+type uploadForm struct {
+	Files []huma.FormFile `form:"files" contentType:"application/octet-stream" required:"true"`
+}
+
+// UploadInput is the request for POST /v1/uploads.
+type UploadInput struct {
+	Type    string `query:"type" enum:"printer,filament" doc:"Default preset type for bare files whose name does not encode one (printers/ or filaments/). Ignored for zip entries, whose kind comes from their path."`
+	RawBody huma.MultipartFormFiles[uploadForm]
+}
+
+// UploadOutput is the parked draft, plus the admin URL to claim it.
+type UploadOutput struct {
+	Body struct {
+		ID        string          `json:"id" doc:"Unguessable id of the parked draft."`
+		ClaimURL  string          `json:"claimUrl" doc:"Admin app path to review and claim the draft."`
+		ExpiresAt time.Time       `json:"expiresAt" doc:"When the draft is garbage-collected if unclaimed."`
+		Files     []DraftFileView `json:"files" doc:"The validated preset files in the draft."`
 	}
+}
+
+// GetUploadInput addresses a parked draft by id.
+type GetUploadInput struct {
+	ID string `path:"id" doc:"Draft id returned by POST /v1/uploads."`
+}
+
+// GetUploadOutput is a parked draft for review.
+type GetUploadOutput struct {
+	Body struct {
+		ID        string          `json:"id"`
+		CreatedAt time.Time       `json:"createdAt"`
+		ExpiresAt time.Time       `json:"expiresAt"`
+		Files     []DraftFileView `json:"files"`
+	}
+}
+
+// ClaimInput claims a draft. The optional vendor slug is only honoured in dev
+// (no GitHub bot); with the bot configured the slug is resolved from the
+// manifest at head and the body is ignored. The body itself is optional — a
+// claim with no body is valid, since authority comes from the session, not the
+// request.
+type ClaimInput struct {
+	ID   string     `path:"id" doc:"Draft id to claim."`
+	Body *claimBody `required:"false"`
+}
+
+// claimBody is the optional JSON body of a claim.
+type claimBody struct {
+	Vendor string `json:"vendor,omitempty" doc:"Vendor slug to attribute the change to (dev only; ignored when the GitHub bot is configured)."`
+}
+
+// ClaimOutput reports the result of claiming a draft.
+type ClaimOutput struct {
+	Body struct {
+		Claimed        bool     `json:"claimed" doc:"Always true on success."`
+		PRCreated      bool     `json:"prCreated" doc:"Whether a pull request was opened (false in dev without the bot)."`
+		Vendor         string   `json:"vendor" doc:"Vendor slug the change was attributed to."`
+		Files          []string `json:"files" doc:"Repository paths the presets were placed at."`
+		PullRequestURL string   `json:"pullRequestUrl,omitempty" doc:"URL of the opened pull request, when one was created."`
+		Branch         string   `json:"branch,omitempty" doc:"Head branch the change was committed to."`
+		AlreadyExisted bool     `json:"alreadyExisted,omitempty" doc:"True when an idempotent retry returned an existing pull request."`
+		Message        string   `json:"message,omitempty" doc:"Human-readable note, e.g. when no pull request was opened."`
+	}
+}
+
+// registerUploads wires the manual upload and claim operations. They are
+// first-class Huma operations, so they appear in the OpenAPI document and the
+// generated client — the admin app calls them through the typed SDK, with the
+// session token attached by the shared client, rather than by hand.
+//
+// The operations are always registered (even when the store is nil) so the spec
+// is stable regardless of deployment configuration; handlers return 503 when the
+// feature is not wired. The claim operation carries the Stytch auth middleware
+// when one is configured: only a signed-in vendor can turn a parked draft into a
+// pull request. Upload and read are intentionally open — like the slicer
+// hand-off, the id authorizes nothing, and authority is checked at claim time.
+func registerUploads(api huma.API, mw *auth.Middleware, deps uploadDeps) {
 	h := &uploadHandler{deps: deps}
 
-	mux.HandleFunc("POST "+BasePath+"/uploads", h.create)
-	mux.HandleFunc("GET "+BasePath+"/uploads/{id}", h.get)
+	huma.Register(api, huma.Operation{
+		OperationID:   "uploadPresets",
+		Method:        http.MethodPost,
+		Path:          BasePath + "/uploads",
+		DefaultStatus: http.StatusCreated,
+		Summary:       "Upload presets to park for claiming",
+		Description: "Accepts preset YAML files, or a .zip laid out like the presets " +
+			"repository, validates each against the pinned schemas, and parks the " +
+			"result as a short-lived draft. Returns the draft id and the admin URL to claim it.",
+		Tags: []string{"Uploads"},
+	}, h.upload)
 
-	claim := http.HandlerFunc(h.claim)
+	huma.Register(api, huma.Operation{
+		OperationID: "getUpload",
+		Method:      http.MethodGet,
+		Path:        BasePath + "/uploads/{id}",
+		Summary:     "Read a parked upload",
+		Description: "Returns a parked upload draft so the admin app can render it for " +
+			"review. The id is the only capability required; ownership is checked at claim time.",
+		Tags: []string{"Uploads"},
+	}, h.getDraft)
+
+	claimOp := huma.Operation{
+		OperationID: "claimUpload",
+		Method:      http.MethodPost,
+		Path:        BasePath + "/uploads/{id}/claim",
+		Summary:     "Claim an upload and open a pull request",
+		Description: "Authorizes the caller's organization against the vendor manifest " +
+			"at the current head, re-validates the draft, and opens a pull request through " +
+			"the bot. Requires a Stytch session JWT.",
+		Tags: []string{"Uploads"},
+	}
 	if mw != nil {
-		mux.Handle("POST "+BasePath+"/uploads/{id}/claim", mw.RequireAuth(claim))
-	} else {
-		mux.Handle("POST "+BasePath+"/uploads/{id}/claim", claim)
+		claimOp.Middlewares = huma.Middlewares{requireAuthOp(api, mw)}
+	}
+	huma.Register(api, claimOp, h.claim)
+}
+
+// requireAuthOp adapts the Stytch middleware to a Huma operation middleware. It
+// reads the bearer token off the huma.Context, runs the same offline
+// verification as RequireAuth, and either writes a 401 or injects the validated
+// claims into the request context for the handler to read.
+func requireAuthOp(api huma.API, mw *auth.Middleware) func(huma.Context, func(huma.Context)) {
+	return func(hctx huma.Context, next func(huma.Context)) {
+		token := auth.BearerFromHeader(hctx.Header("Authorization"))
+		claims, err := mw.Verify(hctx.Context(), token)
+		if err != nil {
+			hctx.SetHeader("WWW-Authenticate", `Bearer error="invalid_token", error_description="`+auth.Reason(err)+`"`)
+			_ = huma.WriteErr(api, hctx, http.StatusUnauthorized, auth.Reason(err))
+			return
+		}
+		next(huma.WithContext(hctx, auth.WithClaims(hctx.Context(), claims)))
 	}
 }
 
@@ -75,102 +198,67 @@ type uploadHandler struct {
 	deps uploadDeps
 }
 
-// fileError is a per-file validation failure returned to the client so the
-// admin app can point at the offending upload and field.
+// fileError is a per-file validation failure, converted to structured Huma
+// error details so the admin app can point at the offending upload and field.
 type fileError struct {
-	File    string         `json:"file"`
-	Kind    string         `json:"kind,omitempty"`
-	Message string         `json:"message,omitempty"`
-	Errors  []preset.Error `json:"errors,omitempty"`
+	File    string
+	Kind    string
+	Message string
+	Errors  []preset.Error
 }
 
-// draftFileView is a file as reported back to the client. Content is included so
-// the admin app can preview the exact YAML before claiming.
-type draftFileView struct {
-	Kind     string `json:"kind"`
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Vendor   string `json:"vendor,omitempty"`
-	FileName string `json:"fileName"`
-	Content  string `json:"content"`
-}
-
-// create handles POST /v1/uploads. It accepts a multipart form carrying either
-// a .zip of presets laid out like the repository (printers/…, filaments/…) or
-// individual preset files, validates each against the pinned schemas, parks the
-// result as a draft, and either redirects to the admin claim page or returns the
-// draft as JSON.
-func (h *uploadHandler) create(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
-	if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
-		writeProblem(w, http.StatusBadRequest, "could not read the multipart upload: "+err.Error())
-		return
+// upload handles POST /v1/uploads.
+func (h *uploadHandler) upload(_ context.Context, in *UploadInput) (*UploadOutput, error) {
+	if h.deps.store == nil {
+		return nil, huma.Error503ServiceUnavailable("manual upload is not enabled on this server")
 	}
-	defer func() {
-		if r.MultipartForm != nil {
-			_ = r.MultipartForm.RemoveAll()
-		}
-	}()
+	// The multipart form may spill large files to temp storage; clean it up.
+	if form := in.RawBody.Form; form != nil {
+		defer func() { _ = form.RemoveAll() }()
+	}
 
-	files, fileErrs, err := h.collectFiles(r)
+	defaultKind := preset.Kind(strings.TrimSpace(in.Type))
+	files, fileErrs, err := h.collectFiles(in.RawBody.Data().Files, defaultKind)
 	if err != nil {
-		writeProblem(w, http.StatusBadRequest, err.Error())
-		return
+		return nil, huma.Error400BadRequest(err.Error())
 	}
 	if len(fileErrs) > 0 {
-		writeProblemWithErrors(w, http.StatusUnprocessableEntity,
-			"one or more uploaded presets are invalid", fileErrs)
-		return
+		return nil, huma.Error422UnprocessableEntity(
+			"one or more uploaded presets are invalid", validationDetails(fileErrs)...)
 	}
 	if len(files) == 0 {
-		writeProblem(w, http.StatusBadRequest,
+		return nil, huma.Error400BadRequest(
 			"no preset files were found in the upload; send preset YAML files or a .zip laid out like the presets repository")
-		return
 	}
 
 	draft, err := h.deps.store.Create(files)
 	if err != nil {
-		writeProblem(w, http.StatusInternalServerError, "could not store the upload: "+err.Error())
-		return
+		return nil, huma.Error500InternalServerError("could not store the upload", err)
 	}
 
-	claimURL := claimPathBase + draft.ID
-	// A browser form (or an explicit ?redirect=1) wants to land on the claim
-	// page; a programmatic client wants the id and the URL as JSON.
-	if wantsRedirect(r) {
-		http.Redirect(w, r, claimURL, http.StatusSeeOther)
-		return
-	}
-	writeJSON(w, http.StatusCreated, map[string]any{
-		"id":        draft.ID,
-		"claimUrl":  claimURL,
-		"expiresAt": draft.ExpiresAt,
-		"files":     draftFileViews(draft),
-	})
+	out := &UploadOutput{}
+	out.Body.ID = draft.ID
+	out.Body.ClaimURL = claimPathBase + draft.ID
+	out.Body.ExpiresAt = draft.ExpiresAt
+	out.Body.Files = draftFileViews(draft)
+	return out, nil
 }
 
-// get handles GET /v1/uploads/{id}. It returns the parked draft so the admin app
-// can render it for review. The id is the capability; no ownership is checked
-// here, only at claim time.
-func (h *uploadHandler) get(w http.ResponseWriter, r *http.Request) {
-	draft, err := h.deps.store.Get(r.PathValue("id"))
+// getDraft handles GET /v1/uploads/{id}.
+func (h *uploadHandler) getDraft(_ context.Context, in *GetUploadInput) (*GetUploadOutput, error) {
+	if h.deps.store == nil {
+		return nil, huma.Error503ServiceUnavailable("manual upload is not enabled on this server")
+	}
+	draft, err := h.deps.store.Get(in.ID)
 	if err != nil {
-		writeProblem(w, http.StatusNotFound, "this upload was not found or has expired")
-		return
+		return nil, huma.Error404NotFound("this upload was not found or has expired")
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"id":        draft.ID,
-		"createdAt": draft.CreatedAt,
-		"expiresAt": draft.ExpiresAt,
-		"files":     draftFileViews(draft),
-	})
-}
-
-// claimRequest is the optional JSON body of a claim. In dev (no GitHub bot) the
-// caller may name the vendor slug directly; with the bot configured the slug is
-// resolved from the manifest and this is ignored.
-type claimRequest struct {
-	Vendor string `json:"vendor"`
+	out := &GetUploadOutput{}
+	out.Body.ID = draft.ID
+	out.Body.CreatedAt = draft.CreatedAt
+	out.Body.ExpiresAt = draft.ExpiresAt
+	out.Body.Files = draftFileViews(draft)
+	return out, nil
 }
 
 // claim handles POST /v1/uploads/{id}/claim. It resolves the caller's writable
@@ -178,45 +266,39 @@ type claimRequest struct {
 // the GitHub bot is configured — opens a pull request. In dev it returns the
 // resolved change set without opening a PR, so the flow is exercisable end to end
 // without credentials.
-func (h *uploadHandler) claim(w http.ResponseWriter, r *http.Request) {
-	draft, err := h.deps.store.Get(r.PathValue("id"))
+func (h *uploadHandler) claim(ctx context.Context, in *ClaimInput) (*ClaimOutput, error) {
+	if h.deps.store == nil {
+		return nil, huma.Error503ServiceUnavailable("manual upload is not enabled on this server")
+	}
+	draft, err := h.deps.store.Get(in.ID)
 	if err != nil {
-		writeProblem(w, http.StatusNotFound, "this upload was not found or has expired")
-		return
+		return nil, huma.Error404NotFound("this upload was not found or has expired")
 	}
 
-	var body claimRequest
-	if r.Body != nil {
-		_ = json.NewDecoder(io.LimitReader(r.Body, 4<<10)).Decode(&body)
-	}
-	claims, hasClaims := auth.ClaimsFromContext(r.Context())
+	claims, hasClaims := auth.ClaimsFromContext(ctx)
 
 	// A process preset lives in the shared, project-owned namespace and is not
 	// writable through the API by any vendor. Reject before touching GitHub.
 	for _, f := range draft.Files {
 		if f.Kind == preset.KindProcess {
-			writeProblem(w, http.StatusForbidden,
+			return nil, huma.Error403Forbidden(
 				"process presets belong to the shared processes/ namespace and cannot be submitted through Vendor Admin")
-			return
 		}
 	}
 
-	slug, err := h.resolveVendor(r.Context(), claims, body.Vendor)
+	slug, err := h.resolveVendor(ctx, claims, requestedVendor(in.Body))
 	if err != nil {
 		if errors.Is(err, submit.ErrVendorNotFound) {
-			writeProblem(w, http.StatusForbidden,
+			return nil, huma.Error403Forbidden(
 				"your organization does not own a vendor namespace; ask a maintainer to add your Stytch organization to a vendor.yaml")
-			return
 		}
-		writeUpstreamProblem(w, err)
-		return
+		return nil, upstreamError(err)
 	}
 
 	files, fileErrs := h.buildRepoFiles(slug, draft)
 	if len(fileErrs) > 0 {
-		writeProblemWithErrors(w, http.StatusUnprocessableEntity,
-			"the uploaded presets no longer validate for this vendor", fileErrs)
-		return
+		return nil, huma.Error422UnprocessableEntity(
+			"the uploaded presets no longer validate for this vendor", validationDetails(fileErrs)...)
 	}
 
 	paths := make([]string, len(files))
@@ -224,17 +306,17 @@ func (h *uploadHandler) claim(w http.ResponseWriter, r *http.Request) {
 		paths[i] = f.Path
 	}
 
+	out := &ClaimOutput{}
+	out.Body.Claimed = true
+	out.Body.Vendor = slug
+	out.Body.Files = paths
+
 	// Without the bot we cannot open a pull request. Return the resolved,
 	// validated change set so the flow still completes visibly in dev.
 	if h.deps.submitter == nil {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"claimed":   true,
-			"prCreated": false,
-			"vendor":    slug,
-			"files":     paths,
-			"message":   "The GitHub App bot is not configured, so no pull request was opened. Configure it to enable submissions.",
-		})
-		return
+		out.Body.PRCreated = false
+		out.Body.Message = "The GitHub App bot is not configured, so no pull request was opened. Configure it to enable submissions."
+		return out, nil
 	}
 
 	req := submit.Request{
@@ -244,23 +326,26 @@ func (h *uploadHandler) claim(w http.ResponseWriter, r *http.Request) {
 		CommitMessage: commitMessage(slug, claims, hasClaims, len(files)),
 		Files:         files,
 	}
-	res, err := h.deps.submitter.Submit(r.Context(), req)
+	res, err := h.deps.submitter.Submit(ctx, req)
 	if err != nil {
-		writeUpstreamProblem(w, err)
-		return
+		return nil, upstreamError(err)
 	}
 
 	// The pull request is now the record; the draft has served its purpose.
 	h.deps.store.Delete(draft.ID)
-	writeJSON(w, http.StatusOK, map[string]any{
-		"claimed":        true,
-		"prCreated":      true,
-		"vendor":         slug,
-		"files":          paths,
-		"pullRequestUrl": res.URL,
-		"branch":         res.Branch,
-		"alreadyExisted": res.AlreadyExisted,
-	})
+	out.Body.PRCreated = true
+	out.Body.PullRequestURL = res.URL
+	out.Body.Branch = res.Branch
+	out.Body.AlreadyExisted = res.AlreadyExisted
+	return out, nil
+}
+
+// requestedVendor safely reads the optional vendor slug from a possibly-nil body.
+func requestedVendor(b *claimBody) string {
+	if b == nil {
+		return ""
+	}
+	return b.Vendor
 }
 
 // resolveVendor determines the vendor slug the caller may write to. With the bot
@@ -307,46 +392,33 @@ func (h *uploadHandler) buildRepoFiles(slug string, draft *upload.Draft) ([]subm
 	return files, errs
 }
 
-// collectFiles reads every uploaded part, expands any .zip, infers each file's
+// collectFiles reads every uploaded file, expands any .zip, infers each file's
 // kind, and validates it. It returns the parsed draft files and any per-file
 // validation errors.
-func (h *uploadHandler) collectFiles(r *http.Request) ([]upload.File, []fileError, error) {
-	if r.MultipartForm == nil {
-		return nil, nil, errors.New("the request was not a multipart upload")
-	}
+func (h *uploadHandler) collectFiles(uploaded []huma.FormFile, defaultKind preset.Kind) ([]upload.File, []fileError, error) {
 	acc := &fileAccumulator{}
+	for _, ff := range uploaded {
+		content, err := io.ReadAll(io.LimitReader(ff, maxUploadBytes))
+		_ = ff.Close()
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not read uploaded file %q: %w", ff.Filename, err)
+		}
 
-	// Optional default kind for bare files whose name does not encode one.
-	defaultKind := preset.Kind(strings.TrimSpace(r.FormValue("type")))
-
-	for field, headers := range r.MultipartForm.File {
-		for _, fh := range headers {
-			opened, err := fh.Open()
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not read uploaded file %q: %w", fh.Filename, err)
-			}
-			content, err := io.ReadAll(io.LimitReader(opened, maxUploadBytes))
-			_ = opened.Close()
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not read uploaded file %q: %w", fh.Filename, err)
-			}
-
-			if isZip(fh.Filename, content) {
-				if err := h.filesFromZip(content, acc); err != nil {
-					return nil, nil, err
-				}
-				continue
-			}
-
-			kind := kindFor(field, fh.Filename, defaultKind)
-			file, ferr, ok := h.parseFile(fh.Filename, kind, content)
-			if !ok {
-				acc.addError(ferr)
-				continue
-			}
-			if err := acc.add(file); err != nil {
+		if isZip(ff.Filename, content) {
+			if err := h.filesFromZip(content, acc); err != nil {
 				return nil, nil, err
 			}
+			continue
+		}
+
+		kind := kindForName(ff.Filename, defaultKind)
+		file, ferr, ok := h.parseFile(ff.Filename, kind, content)
+		if !ok {
+			acc.addError(ferr)
+			continue
+		}
+		if err := acc.add(file); err != nil {
+			return nil, nil, err
 		}
 	}
 	return acc.files, acc.fileErrs, nil
@@ -422,7 +494,7 @@ func (h *uploadHandler) parseFile(name string, kind preset.Kind, content []byte)
 	base := path.Base(strings.ReplaceAll(name, "\\", "/"))
 	if !kind.Valid() {
 		return upload.File{}, fileError{File: base,
-			Message: "could not determine the preset type; name the file printers/<id>.yaml, filaments/<id>.yaml, or pass type=printer|filament|process"}, false
+			Message: "could not determine the preset type; name the file printers/<id>.yaml, filaments/<id>.yaml, or pass type=printer|filament"}, false
 	}
 	res := h.deps.validator.ValidateFile(kind, base, content)
 	if !res.Valid() {
@@ -443,12 +515,9 @@ func (h *uploadHandler) parseFile(name string, kind preset.Kind, content []byte)
 
 // --- helpers ---
 
-// kindFor infers a preset kind for a bare (non-zip) part: an explicit form field
-// name wins, then the file path, then the form-wide default.
-func kindFor(field, filename string, fallback preset.Kind) preset.Kind {
-	if k := preset.Kind(strings.TrimSpace(field)); k.Valid() {
-		return k
-	}
+// kindForName infers a bare file's kind from its path (printers/…, filaments/…),
+// falling back to the form-wide default when the name carries no layout.
+func kindForName(filename string, fallback preset.Kind) preset.Kind {
 	if k, ok := preset.KindFromPath(filename); ok {
 		return k
 	}
@@ -472,7 +541,7 @@ func isYAML(name string) bool {
 	return strings.HasSuffix(l, ".yaml") || strings.HasSuffix(l, ".yml")
 }
 
-// isZip reports whether a part is a zip, by extension or by the PK magic bytes,
+// isZip reports whether a file is a zip, by extension or by the PK magic bytes,
 // so a zip uploaded without a helpful name is still expanded.
 func isZip(name string, content []byte) bool {
 	if strings.HasSuffix(strings.ToLower(name), ".zip") {
@@ -482,21 +551,31 @@ func isZip(name string, content []byte) bool {
 		(content[2] == 0x03 || content[2] == 0x05 || content[2] == 0x07)
 }
 
-// wantsRedirect reports whether the client should be redirected to the claim
-// page rather than handed JSON: an explicit redirect flag, or a browser form
-// post that prefers HTML.
-func wantsRedirect(r *http.Request) bool {
-	if v := strings.TrimSpace(r.FormValue("redirect")); v != "" && v != "0" && v != "false" {
-		return true
+// validationDetails turns per-file validation failures into Huma error details,
+// so the response carries a structured "errors" array the admin app can render
+// against the specific file and field.
+func validationDetails(errs []fileError) []error {
+	var out []error
+	for _, fe := range errs {
+		if len(fe.Errors) == 0 {
+			out = append(out, &huma.ErrorDetail{Location: fe.File, Message: fe.Message})
+			continue
+		}
+		for _, e := range fe.Errors {
+			loc := fe.File
+			if e.Path != "" {
+				loc = fe.File + "#" + e.Path
+			}
+			out = append(out, &huma.ErrorDetail{Location: loc, Message: e.Message})
+		}
 	}
-	accept := r.Header.Get("Accept")
-	return strings.Contains(accept, "text/html") && !strings.Contains(accept, "application/json")
+	return out
 }
 
-func draftFileViews(d *upload.Draft) []draftFileView {
-	views := make([]draftFileView, len(d.Files))
+func draftFileViews(d *upload.Draft) []DraftFileView {
+	views := make([]DraftFileView, len(d.Files))
 	for i, f := range d.Files {
-		views[i] = draftFileView{
+		views[i] = DraftFileView{
 			Kind:     string(f.Kind),
 			ID:       f.ID,
 			Name:     f.Name,
@@ -560,46 +639,19 @@ func commitMessage(slug string, claims auth.Claims, hasClaims bool, n int) strin
 	return b.String()
 }
 
-// writeJSON writes a JSON body with the given status.
-func writeJSON(w http.ResponseWriter, status int, body any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
-}
-
-// writeProblemWithErrors renders an RFC 9457 problem document carrying per-file
-// validation errors under an "errors" member.
-func writeProblemWithErrors(w http.ResponseWriter, status int, detail string, errs []fileError) {
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"status": status,
-		"title":  http.StatusText(status),
-		"detail": detail,
-		"errors": errs,
-	})
-}
-
-// writeUpstreamProblem maps a GitHub-layer error to the right status: a rate
-// limit becomes 503 with Retry-After, a permission or not-found problem becomes
-// 502, and anything else becomes 502 as well — never a success the client would
-// have to reconcile later.
-func writeUpstreamProblem(w http.ResponseWriter, err error) {
+// upstreamError maps a GitHub-layer error to the right Huma status: a rate limit
+// becomes 503 with Retry-After, and anything else becomes 502 — never a success
+// the client would have to reconcile later.
+func upstreamError(err error) error {
 	var rle *ghapp.RateLimitedError
 	if errors.As(err, &rle) {
-		if d := rle.RetryAfter(time.Now()); d > 0 {
-			w.Header().Set("Retry-After", fmt.Sprintf("%d", int(d.Seconds()+0.999)))
-		}
-		writeProblem(w, http.StatusServiceUnavailable,
+		e := huma.Error503ServiceUnavailable(
 			"GitHub is rate limiting submissions right now; please try again shortly")
-		return
+		if d := rle.RetryAfter(time.Now()); d > 0 {
+			secs := int(d.Seconds() + 0.999)
+			return huma.ErrorWithHeaders(e, http.Header{"Retry-After": []string{fmt.Sprintf("%d", secs)}})
+		}
+		return e
 	}
-	var perr *ghapp.PermissionError
-	var nferr *ghapp.NotFoundError
-	if errors.As(err, &perr) || errors.As(err, &nferr) {
-		writeProblem(w, http.StatusBadGateway,
-			"the submission could not be completed on GitHub: "+err.Error())
-		return
-	}
-	writeProblem(w, http.StatusBadGateway, "the submission could not be completed on GitHub: "+err.Error())
+	return huma.Error502BadGateway("the submission could not be completed on GitHub: " + err.Error())
 }

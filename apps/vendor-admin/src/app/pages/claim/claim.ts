@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   type ElementRef,
+  computed,
   effect,
   inject,
   signal,
@@ -40,6 +41,11 @@ export class Claim {
   protected readonly claimError = signal<string | null>(null);
   protected readonly result = signal<ClaimResult | null>(null);
   protected readonly busy = this.uploads.busy;
+
+  // The generated types mark the file arrays nullable; normalise to arrays so
+  // the template can iterate and count without null guards.
+  protected readonly files = computed(() => this.draft()?.files ?? []);
+  protected readonly resultPaths = computed(() => this.result()?.files ?? []);
 
   private readonly loginHost = viewChild<ElementRef<HTMLElement>>('loginHost');
   private id = '';
