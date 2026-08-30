@@ -24,10 +24,5 @@
     "@hey-api/openapi-ts": "^0.99.0",
     "lefthook": "^2.1.12",
     "prettier": "^3.9.6"
-  },
-  "pnpm": {
-    "overrides": {
-      "typescript": "6.0.3"
-    }
   }
 }
