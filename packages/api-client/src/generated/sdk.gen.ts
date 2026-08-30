@@ -16,6 +16,9 @@ import type {
   GetHealthData,
   GetHealthErrors,
   GetHealthResponses,
+  GetPresetData,
+  GetPresetErrors,
+  GetPresetResponses,
   GetUploadData,
   GetUploadErrors,
   GetUploadResponses,
@@ -75,6 +78,19 @@ export const searchPresets = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Fetch a complete preset in the slicer's profile shape
+ *
+ * Returns the complete preset identified by id, with source "catalog" and a canonical import_url. This is the exact JSON the slicer can consume directly, so a client imports one preset without downloading the whole catalog.
+ */
+export const getPreset = <ThrowOnError extends boolean = false>(
+  options: Options<GetPresetData, ThrowOnError>,
+): RequestResult<GetPresetResponses, GetPresetErrors, ThrowOnError> =>
+  (options.client ?? client).get<GetPresetResponses, GetPresetErrors, ThrowOnError>({
+    url: '/v1/presets/{id}',
+    ...options,
+  });
+
+/**
  * Upload presets to park for claiming
  *
  * Accepts preset YAML files, or a .zip laid out like the presets repository, validates each against the pinned schemas, and parks the result as a short-lived draft. Returns the draft id and the admin URL to claim it.
@@ -125,7 +141,7 @@ export const claimUpload = <ThrowOnError extends boolean = false>(
 /**
  * List the vendor directory
  *
- * Returns the vendor directory derived from the vendor.yaml manifests in the served catalog. The stytch_organization_id is not part of the public representation.
+ * Returns a page of the vendor directory derived from the vendor.yaml manifests in the served catalog. The directory is cursor-paginated so it is never dumped in one response; the stytch_organization_id is not part of the public representation.
  */
 export const listVendors = <ThrowOnError extends boolean = false>(
   options?: Options<ListVendorsData, ThrowOnError>,

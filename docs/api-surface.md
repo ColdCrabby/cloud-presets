@@ -15,7 +15,7 @@ Preset field semantics are in [preset-schema.md](./preset-schema.md); auth is in
 2. [Versioning and Base Path](#versioning-and-base-path)
 3. [Catalog Revision and Caching](#catalog-revision-and-caching)
 4. [Public Endpoints](#public-endpoints)
-5. [Slicer Bulk Endpoints](#slicer-bulk-endpoints)
+5. [Slicer Integration](#slicer-integration)
 6. [Vendor Endpoints](#vendor-endpoints)
 7. [Slicer Hand-Off](#slicer-hand-off)
 8. [Operational Endpoints](#operational-endpoints)
@@ -135,6 +135,11 @@ Returns the complete preset in the slicer's profile shape, with `source` set to
 `catalog` and `import_url` set to this preset's canonical URL. This is the exact
 JSON the slicer can consume directly.
 
+This is the **only** way to obtain a full preset: search returns summaries, so a
+client imports one specific preset by fetching it here rather than downloading
+the whole catalog and filtering locally. A well-formed id that names no preset
+returns **`404 Not Found`**.
+
 Retired presets return **`410 Gone`**, optionally naming a successor, so a client
 can distinguish "withdrawn" from "never existed". IDs are never reused, so `410`
 is permanent.
@@ -151,7 +156,7 @@ itself. Content negotiation serves JSON for `Accept: application/json`.
 ### Vendors
 
 ```http
-GET /v1/vendors
+GET /v1/vendors?limit=20&cursor=...
 GET /v1/vendors/{slug}
 ```
 
@@ -161,33 +166,33 @@ the public representation — not because it is secret (it sits in a public
 repository), but because it is an authorization detail with no meaning to API
 consumers.
 
+Like search, the directory is **cursor-paginated** (ordered by slug) and never
+returned as one unbounded array, so no endpoint dumps the whole set in a single
+response. Cursors carry the same revision/build binding as search and return
+`409` when stale.
+
 ---
 
-## Slicer Bulk Endpoints
+## Slicer Integration
 
-```http
-GET /v1/catalog/printers
-GET /v1/catalog/filaments
-GET /v1/catalog/processes
-```
+The slicer does **not** get bulk "dump everything" endpoints. There is no
+`GET /v1/catalog/printers` (or `/filaments`, `/processes`) returning a complete
+array of full presets: an endpoint that ships the entire catalog in one response
+is explicitly disallowed, because it grows unbounded with the catalog and forces
+every consumer to download and filter everything to find one preset.
 
-Each returns a complete array of full presets for that category.
+Instead the slicer integrates through the two bounded endpoints above:
 
-These exist to match the slicer's **existing** `CatalogSource` interface
-(`printers()`, `filaments()`, `profiles()`), which fetches everything once and
-caches it in memory for the session. Serving that shape means the slicer can
-adopt the cloud catalog by overriding one injection token — no pagination logic,
-no release coupling between this project and the slicer.
+- **Browse/search** with `GET /v1/presets` — always paged, summaries only.
+- **Import one preset** with `GET /v1/presets/{id}` — the full profile in the
+  slicer's shape, fetched only for the preset the user actually selected.
 
-This is a deliberate, bounded duplication of the search endpoints, and it is
-sound while the catalog is small enough to send in one response. When it is not,
-the slicer migrates to the search endpoints; the bulk endpoints then become a
-compatibility surface for older builds rather than the primary path. Because
-these responses are large and change only per revision, `ETag`/`304` handling
-matters most here.
+The slicer's adapter walks pages via the cursor to populate its `CatalogSource`
+lazily rather than fetching everything once. Because pages change only per
+revision, `ETag`/`304` handling still applies per page.
 
-Note the naming mismatch: the slicer calls this category `profiles()` in its
-interface, while the engine, the repository, and this API all call it
+Note the naming mismatch: the slicer calls the quality category `profiles()` in
+its interface, while the engine, the repository, and this API all call it
 **processes**. The API uses `processes` consistently; the adapter on the slicer
 side absorbs the difference.
 

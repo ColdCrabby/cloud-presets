@@ -38,10 +38,50 @@ type Catalog struct {
 	// catalog from the same commit.
 	Records []search.Record
 
+	// Presets is the full-profile lookup keyed by preset ID, holding the
+	// complete slicing parameters the detail endpoint (GET /v1/presets/{id})
+	// serves. Search results carry only summaries (see search.Record), so a
+	// client imports a specific preset into the slicer by fetching its full
+	// profile here rather than downloading the whole catalog and filtering
+	// locally. See docs/api-surface.md ("Detail").
+	Presets map[string]FullPreset
+
 	// Vendors is the public vendor directory for this revision, derived from
 	// the vendor.yaml manifests. It carries only the public representation:
 	// the authorization detail stytch_organization_id is deliberately absent.
 	Vendors []Vendor
+}
+
+// FullPreset is the complete preset served by the detail endpoint in the
+// slicer's profile shape: the identity fields plus the sparse bag of slicing
+// overrides (Params). It is the exact JSON a slicer can consume directly, so
+// the catalog carries it alongside the search summaries and never has to
+// reassemble a full profile on demand.
+type FullPreset struct {
+	// ID is the stable preset identifier, matching the search summary's ID.
+	ID string
+
+	// Type is the preset kind: printer, filament or process.
+	Type string
+
+	// Name is the human-readable preset name.
+	Name string
+
+	// Vendor is the vendor slug the preset belongs to.
+	Vendor string
+
+	// Params is the preset's sparse bag of slicing overrides, using the
+	// slicer's own field names and units. Omitted keys fall back to the
+	// slicer's defaults.
+	Params map[string]any
+}
+
+// Preset returns the full profile for id and whether it exists in this
+// snapshot, so the detail handler can distinguish a known preset from an
+// unknown one (404) without exposing the underlying map.
+func (c *Catalog) Preset(id string) (FullPreset, bool) {
+	p, ok := c.Presets[id]
+	return p, ok
 }
 
 // Vendor is one entry in the public vendor directory, derived from a

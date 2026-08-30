@@ -100,6 +100,83 @@ func Sample() *Catalog {
 				Website:     strptr("https://bambulab.com"),
 			},
 		},
+		Presets: map[string]FullPreset{
+			"prusa-mk4": {
+				ID: "prusa-mk4", Type: "printer", Name: "Prusa MK4", Vendor: "prusa",
+				Params: map[string]any{
+					"bed_shape":        "250x210",
+					"nozzle_diameter":  0.4,
+					"max_print_height": 220,
+				},
+			},
+			"prusa-mk3s": {
+				ID: "prusa-mk3s", Type: "printer", Name: "Prusa MK3S+", Vendor: "prusa",
+				Params: map[string]any{
+					"bed_shape":        "250x210",
+					"nozzle_diameter":  0.4,
+					"max_print_height": 210,
+				},
+			},
+			"prusa-mini": {
+				ID: "prusa-mini", Type: "printer", Name: "Prusa Mini+", Vendor: "prusa",
+				Params: map[string]any{
+					"bed_shape":        "180x180",
+					"nozzle_diameter":  0.4,
+					"max_print_height": 180,
+				},
+			},
+			"bambu-x1c": {
+				ID: "bambu-x1c", Type: "printer", Name: "Bambu Lab X1 Carbon", Vendor: "bambulab",
+				Params: map[string]any{
+					"bed_shape":        "256x256",
+					"nozzle_diameter":  0.4,
+					"max_print_height": 256,
+				},
+			},
+			"prusament-pla-galaxy-black": {
+				ID: "prusament-pla-galaxy-black", Type: "filament", Name: "Prusament PLA Galaxy Black", Vendor: "prusa",
+				Params: map[string]any{
+					"filament_type":    "PLA",
+					"temperature":      215,
+					"bed_temperature":  60,
+					"filament_density": 1.24,
+				},
+			},
+			"prusament-petg-jet-black": {
+				ID: "prusament-petg-jet-black", Type: "filament", Name: "Prusament PETG Jet Black", Vendor: "prusa",
+				Params: map[string]any{
+					"filament_type":    "PETG",
+					"temperature":      240,
+					"bed_temperature":  85,
+					"filament_density": 1.27,
+				},
+			},
+			"bambu-abs-black": {
+				ID: "bambu-abs-black", Type: "filament", Name: "Bambu ABS Black", Vendor: "bambulab",
+				Params: map[string]any{
+					"filament_type":    "ABS",
+					"temperature":      260,
+					"bed_temperature":  90,
+					"filament_density": 1.05,
+				},
+			},
+			"process-0-20mm-quality": {
+				ID: "process-0-20mm-quality", Type: "process", Name: "0.20 mm Quality", Vendor: "prusa",
+				Params: map[string]any{
+					"layer_height": 0.20,
+					"perimeters":   2,
+					"fill_density": "15%",
+				},
+			},
+			"process-0-28mm-draft": {
+				ID: "process-0-28mm-draft", Type: "process", Name: "0.28 mm Draft", Vendor: "prusa",
+				Params: map[string]any{
+					"layer_height": 0.28,
+					"perimeters":   2,
+					"fill_density": "10%",
+				},
+			},
+		},
 	}
 }
 

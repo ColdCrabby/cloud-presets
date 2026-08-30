@@ -137,7 +137,24 @@ const server = createServer((req, res) => {
   }
 
   if (path === '/v1/vendors') {
-    return send(res, 200, VENDORS);
+    // Mirror the real API's cursor pagination: order by slug, bound the page
+    // size, and hand back an opaque offset cursor so nothing dumps the whole
+    // directory at once.
+    const sorted = [...VENDORS].sort((a, b) => a.slug.localeCompare(b.slug));
+    const limitParam = Number(url.searchParams.get('limit'));
+    const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 100) : 20;
+    const cursor = url.searchParams.get('cursor');
+    let offset = 0;
+    if (cursor) {
+      const decoded = Number.parseInt(Buffer.from(cursor, 'base64url').toString('utf8'), 10);
+      if (Number.isFinite(decoded) && decoded >= 0) offset = decoded;
+    }
+    const end = Math.min(offset + limit, sorted.length);
+    const body = { vendors: sorted.slice(offset, end), revision: REVISION };
+    if (end < sorted.length) {
+      body.next_cursor = Buffer.from(String(end), 'utf8').toString('base64url');
+    }
+    return send(res, 200, body);
   }
 
   if (path === '/v1/vendor/presets') {
