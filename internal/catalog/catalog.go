@@ -11,6 +11,8 @@ package catalog
 import (
 	"sync/atomic"
 	"time"
+
+	"github.com/ColdCrabby/cloud-presets/internal/search"
 )
 
 // Catalog is an immutable snapshot of the presets served for one Git commit.
@@ -22,8 +24,19 @@ type Catalog struct {
 	// Revision is the Git commit SHA the snapshot was built from.
 	Revision string
 
+	// BuildID is the server build identity the snapshot was assembled by
+	// (schema digest, validator version, binary build). Pagination cursors are
+	// bound to Revision+BuildID so a cursor issued before either changed is
+	// rejected rather than silently paginating across two catalogs.
+	BuildID string
+
 	// BuiltAt is when this snapshot was assembled.
 	BuiltAt time.Time
+
+	// Records is the in-memory search index over the snapshot: the short text
+	// fields search ranks and a result row renders, built atomically with the
+	// catalog from the same commit.
+	Records []search.Record
 }
 
 // Holder is the concurrency-safe pointer to the current catalog.
