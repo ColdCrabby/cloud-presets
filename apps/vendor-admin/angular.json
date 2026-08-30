@@ -27,11 +27,33 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
+            "baseHref": "/vendor/",
             "inlineStyleLanguage": "scss",
+            "externalDependencies": [
+              "marked-katex-extension",
+              "marked-mangle",
+              "marked-gfm-heading-id",
+              "marked-emoji",
+              "prismjs",
+              "mermaid"
+            ],
+            "stylePreprocessorOptions": {
+              "includePaths": ["../../.coldcrabby-ui/src/styles"]
+            },
             "assets": [
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*.svg",
+                "input": "node_modules/iconoir/icons/regular",
+                "output": "/assets/icons"
+              },
+              {
+                "glob": "**/*.svg",
+                "input": "node_modules/iconoir/icons/solid",
+                "output": "/assets/icons/solid"
               }
             ],
             "styles": ["src/styles.scss"]
@@ -46,8 +68,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "8kB",
+                  "maximumError": "16kB"
                 }
               ],
               "outputHashing": "all"

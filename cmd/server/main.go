@@ -13,6 +13,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -66,17 +68,40 @@ func main() {
 	}
 }
 
-// withFrontends mounts the API under /v1 and serves the two built Angular apps:
-// the public app at / and the vendor-admin app at /vendor/. Missing build dirs
-// are skipped so the API still serves on its own.
+// withFrontends mounts the API under /v1 and serves the two Angular apps at one
+// origin: the public app at / and the vendor-admin app at /vendor/, exactly as
+// production does. This single-origin shape is also what dev uses — set the
+// *_DEV_URL env vars and this same server reverse-proxies each surface to its
+// live Vite dev server (HMR included) instead of serving a built dist, so local
+// dev mirrors the deployment down to the URL layout. Missing build dirs are
+// skipped so the API still serves on its own.
+//
+//	PUBLIC_DEV_URL   proxy /        to the public app's dev server
+//	VENDOR_DEV_URL   proxy /vendor/ to the vendor app's dev server
+//	STUB_API_URL     proxy /v1/     to the stub API (dev sample data)
 func withFrontends(apiHandler http.Handler) http.Handler {
 	publicDir := envOr("PUBLIC_DIR", defaultPublicDir)
 	vendorDir := envOr("VENDOR_DIR", defaultVendorDir)
+	publicDev := os.Getenv("PUBLIC_DEV_URL")
+	vendorDev := os.Getenv("VENDOR_DEV_URL")
+	stubAPI := os.Getenv("STUB_API_URL")
 
 	mux := http.NewServeMux()
-	mux.Handle(api.BasePath+"/", apiHandler)
 
-	if dirHasIndex(vendorDir) {
+	// API: an in-process handler in production; in dev, optionally the stub API
+	// so the catalog has sample data before ingest is wired up.
+	if stubAPI != "" {
+		log.Printf("frontends(dev): proxying %s/ to stub API %s", api.BasePath, stubAPI)
+		mux.Handle(api.BasePath+"/", devProxy(stubAPI))
+	} else {
+		mux.Handle(api.BasePath+"/", apiHandler)
+	}
+
+	switch {
+	case vendorDev != "":
+		log.Printf("frontends(dev): proxying /vendor/ to %s", vendorDev)
+		mux.Handle("/vendor/", devProxy(vendorDev))
+	case dirHasIndex(vendorDir):
 		// The public token is injected into index.html at serve time, so the
 		// token is a runtime env var and changing it needs no rebuild.
 		mux.Handle("/vendor/", spaHandler{
@@ -84,17 +109,38 @@ func withFrontends(apiHandler http.Handler) http.Handler {
 			prefix:       "/vendor/",
 			configScript: stytchConfigScript(os.Getenv("STYTCH_PUBLIC_TOKEN")),
 		})
-	} else {
+	default:
 		log.Printf("frontends: vendor build not found at %s, /vendor disabled", vendorDir)
 	}
 
-	if dirHasIndex(publicDir) {
+	switch {
+	case publicDev != "":
+		log.Printf("frontends(dev): proxying / to %s", publicDev)
+		mux.Handle("/", devProxy(publicDev))
+	case dirHasIndex(publicDir):
 		mux.Handle("/", spaHandler{root: publicDir, prefix: "/"})
-	} else {
+	default:
 		log.Printf("frontends: public build not found at %s, / disabled", publicDir)
 	}
 
 	return mux
+}
+
+// devProxy reverse-proxies to a local dev server (a Vite dev server or the stub
+// API). It rewrites the Host header to the target so Vite accepts the request,
+// and httputil handles the WebSocket upgrade that HMR rides on.
+func devProxy(target string) http.Handler {
+	u, err := url.Parse(target)
+	if err != nil {
+		log.Fatalf("frontends(dev): invalid proxy target %q: %v", target, err)
+	}
+	proxy := httputil.NewSingleHostReverseProxy(u)
+	director := proxy.Director
+	proxy.Director = func(r *http.Request) {
+		director(r)
+		r.Host = u.Host
+	}
+	return proxy
 }
 
 // stytchConfigScript renders the runtime config script injected into the vendor

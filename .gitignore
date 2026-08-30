@@ -39,9 +39,20 @@ node_modules/
 **/node_modules/
 /apps/*/dist/
 /dist/
+
+# Vendored @coldcrabby/ui source (a git-ignored, always-latest checkout of
+# ColdCrabby/ui main — see tools/sync-ui.sh).
+/.coldcrabby-ui/
 .angular/
 **/.angular/cache/
 out-tsc/
 **/out-tsc/
 npm-debug.log
 pnpm-debug.log
+
+# Stray Go build output at the repo root (the Makefile builds to bin/).
+/server
+
+# macOS
+.DS_Store
+**/.DS_Store

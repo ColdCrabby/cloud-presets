@@ -1,0 +1,12 @@
+# Keep the vendored @coldcrabby/ui source (.coldcrabby-ui, git-ignored) on the
+# latest main automatically, so a pull or branch switch never leaves the shared
+# UI stale. See tools/sync-ui.sh.
+post-merge:
+  commands:
+    sync-ui:
+      run: sh tools/sync-ui.sh
+
+post-checkout:
+  commands:
+    sync-ui:
+      run: sh tools/sync-ui.sh

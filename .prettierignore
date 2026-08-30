@@ -3,6 +3,9 @@ dist/
 node_modules/
 .angular/
 
+# Vendored @coldcrabby/ui source — owned by ColdCrabby/ui, formatted there.
+.coldcrabby-ui/
+
 # Architecture docs predate the frontend workspace and follow their own style.
 ARCHITECTURE.md
 README.md

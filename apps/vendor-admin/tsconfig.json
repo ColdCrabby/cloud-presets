@@ -16,8 +16,23 @@
     "target": "ES2022",
     "module": "preserve",
     "paths": {
+      "@coldcrabby/ui": ["../../.coldcrabby-ui/src/public-api.ts"],
       "@cloud-presets/ui": ["../../packages/ui/src/public-api.ts"],
-      "@cloud-presets/api-client": ["../../packages/api-client/src/index.ts"]
+      "@cloud-presets/api-client": ["../../packages/api-client/src/index.ts"],
+      // packages/ui and the vendored @coldcrabby/ui are compiled as source, and
+      // pnpm hands each workspace package its own @angular/core peer-variant.
+      // Pin the shared runtime packages to this app's single copy so all three
+      // trees bundle one Angular (else NG0203 / signal-brand mismatches).
+      "@angular/core": ["./node_modules/@angular/core"],
+      "@angular/core/*": ["./node_modules/@angular/core/*"],
+      "@angular/common": ["./node_modules/@angular/common"],
+      "@angular/common/*": ["./node_modules/@angular/common/*"],
+      "@floating-ui/dom": ["./node_modules/@floating-ui/dom"],
+      "ngx-markdown": ["./node_modules/ngx-markdown"],
+      "rxjs": ["./node_modules/rxjs"],
+      "rxjs/*": ["./node_modules/rxjs/*"],
+      "zone.js": ["./node_modules/zone.js"],
+      "tslib": ["./node_modules/tslib"]
     }
   },
   "angularCompilerOptions": {

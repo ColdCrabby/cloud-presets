@@ -12,12 +12,22 @@
     "start:public": "pnpm --filter public start",
     "start:vendor-admin": "pnpm --filter vendor-admin start",
     "stub-api": "node tools/stub-api/server.mjs",
+    "dev": "node tools/dev.mjs",
     "gen:client": "openapi-ts",
+    "sync:ui": "sh tools/sync-ui.sh",
     "format": "prettier --write \"**/*.{ts,html,scss,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,html,scss,json,md}\""
+    "format:check": "prettier --check \"**/*.{ts,html,scss,json,md}\"",
+    "prepare": "lefthook install || true",
+    "postinstall": "sh tools/sync-ui.sh || true"
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.99.0",
+    "lefthook": "^2.1.12",
     "prettier": "^3.9.6"
+  },
+  "pnpm": {
+    "overrides": {
+      "typescript": "6.0.3"
+    }
   }
 }

@@ -5,7 +5,7 @@
       @if (session.usesStytch) {
         <div #loginHost></div>
       } @else {
-        <cp-button (click)="session.signIn()">Sign in (stub)</cp-button>
+        <button nexusButton variant="primary" (click)="session.signIn()">Sign in (stub)</button>
       }
     </cp-card>
   } @else {
@@ -14,7 +14,7 @@
         <strong>{{ session.member()?.organizationSlug }}</strong>
         <span class="dashboard__email">{{ session.member()?.memberId }}</span>
       </div>
-      <cp-button variant="ghost" (click)="session.signOut()">Sign out</cp-button>
+      <button nexusButton variant="ghost" (click)="session.signOut()">Sign out</button>
     </div>
 
     @if (presets.loading()) {

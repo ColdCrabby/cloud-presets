@@ -1,15 +1,19 @@
 packages:
-  - 'apps/*'
-  - 'packages/*'
+  - "apps/*"
+  - "packages/*"
+  # Vendored @coldcrabby/ui source (git-ignored, cloned by tools/sync-ui.sh) as a
+  # workspace member: pnpm gives it a real node_modules so its CDK subpaths
+  # resolve and its @angular/core matches the apps'.
+  - ".coldcrabby-ui"
 
 allowBuilds:
-  '@parcel/watcher': true
+  "@parcel/watcher": true
   esbuild: true
   lmdb: false
   msgpackr-extract: false
 
 onlyBuiltDependencies:
-  - '@parcel/watcher'
+  - "@parcel/watcher"
   - esbuild
   - lmdb
   - msgpackr-extract

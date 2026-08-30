@@ -1,13 +1,4 @@
-@use '../../../packages/ui/src/theme/tokens';
-
-html,
-body {
-  margin: 0;
-  font-family:
-    'Plus Jakarta Sans',
-    system-ui,
-    -apple-system,
-    sans-serif;
-  background: var(--cp-bg, #f4f5f8);
-  color: var(--cp-fg, #111214);
-}
+// Pull in the shared @coldcrabby/ui design language once (resolved through the
+// Sass includePaths entry in angular.json). It emits the theme tokens, the
+// scrolling-app base reset, and the utilities every primitive relies on.
+@use 'index';

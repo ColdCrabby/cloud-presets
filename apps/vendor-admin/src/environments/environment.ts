@@ -13,5 +13,6 @@ declare global {
 export const environment = {
   production: false,
   apiBaseUrl: '',
+  publicUrl: '/',
   stytchPublicToken: globalThis.window?.__APP_CONFIG__?.stytchPublicToken ?? '',
 };

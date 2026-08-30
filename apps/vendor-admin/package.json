@@ -3,14 +3,16 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build --base-href /vendor/",
+    "start": "ng serve --port 4201 --serve-path /vendor/",
+    "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
   "private": true,
   "packageManager": "pnpm@11.13.1",
   "dependencies": {
+    "@angular/aria": "^22.1.4",
+    "@angular/cdk": "^22.1.4",
     "@angular/common": "^22.1.0",
     "@angular/compiler": "^22.1.0",
     "@angular/core": "^22.1.0",
@@ -19,9 +21,16 @@
     "@angular/router": "^22.1.0",
     "@cloud-presets/api-client": "workspace:*",
     "@cloud-presets/ui": "workspace:*",
+    "@floating-ui/core": "^1.8.0",
+    "@floating-ui/dom": "^1.8.0",
+    "@floating-ui/utils": "^0.2.12",
     "@stytch/vanilla-js": "^6.2.0",
+    "iconoir": "^7.12.1",
+    "marked": "^18.0.0",
+    "ngx-markdown": "^22.0.0",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "zone.js": "~0.16.0"
   },
   "devDependencies": {
     "@angular/build": "^22.1.6",

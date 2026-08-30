@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Shared Angular UI primitives consumed by both the public and vendor-admin apps.",
+  "description": "Cloud-presets domain UI (card, search match-highlight) layered on the shared @coldcrabby/ui design language.",
   "exports": {
     ".": "./src/public-api.ts"
   },
@@ -12,7 +12,8 @@
   },
   "peerDependencies": {
     "@angular/common": "^22.1.0",
-    "@angular/core": "^22.1.0"
+    "@angular/core": "^22.1.0",
+    "zone.js": "~0.16.0"
   },
   "dependencies": {
     "tslib": "^2.3.0"
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@angular/common": "^22.1.0",
     "@angular/core": "^22.1.0",
-    "vitest": "^4.0.8"
+    "vitest": "^4.0.8",
+    "zone.js": "~0.16.0"
   }
 }
