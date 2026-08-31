@@ -62,7 +62,7 @@ func New(holder *catalog.Holder, mw *auth.Middleware, opts ...Option) (huma.API,
 		mux.Handle("GET "+BasePath+"/me", mw.RequireAuth(http.HandlerFunc(handleMe)))
 	}
 	registerUploads(humaAPI, mw, deps)
-	return humaAPI, &problemRouter{mux: mux}
+	return humaAPI, revisionCache(holder, &problemRouter{mux: mux})
 }
 
 // handleMe returns the validated caller's identity. It runs only behind the
