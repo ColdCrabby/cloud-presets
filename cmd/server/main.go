@@ -108,7 +108,9 @@ func main() {
 	}
 	_, apiHandler := api.New(holder, newAuthMiddleware(), newUploadOption(ghClient))
 
-	handler := withFrontends(apiHandler)
+	origins := corsAllowedOrigins()
+	log.Printf("cors: allowing cross-origin API access from %v", origins)
+	handler := withFrontends(api.CORS(origins, apiHandler))
 
 	log.Printf("preset cloud API listening on %s (ready=%t)", addr, holder.Ready())
 	if err := http.ListenAndServe(addr, handler); err != nil {
@@ -234,6 +236,24 @@ func newAuthMiddleware() *auth.Middleware {
 	}
 	log.Print("auth: Stytch session validation enabled")
 	return auth.NewMiddleware(verifier)
+}
+
+// corsAllowedOrigins returns the cross-origin web apps allowed to call the API
+// from a browser. It defaults to api.DefaultAllowedOrigins and can be overridden
+// with a comma-separated CORS_ALLOWED_ORIGINS list (each an exact scheme+host
+// origin, e.g. "https://slicer.maxsopp.de").
+func corsAllowedOrigins() []string {
+	raw := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if raw == "" {
+		return api.DefaultAllowedOrigins
+	}
+	var origins []string
+	for _, o := range strings.Split(raw, ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			origins = append(origins, o)
+		}
+	}
+	return origins
 }
 
 func envOr(key, fallback string) string {
