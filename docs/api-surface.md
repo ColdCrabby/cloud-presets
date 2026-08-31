@@ -191,6 +191,13 @@ The slicer's adapter walks pages via the cursor to populate its `CatalogSource`
 lazily rather than fetching everything once. Because pages change only per
 revision, `ETag`/`304` handling still applies per page.
 
+Because the slicer is a browser app served from its own origin
+(`https://slicer.maxsopp.de`), the API answers its requests with cross-origin
+resource sharing (CORS) headers. The allowlist defaults to that origin and is
+overridable with the comma-separated `CORS_ALLOWED_ORIGINS` env var; requests
+without an `Origin`, or from an origin not on the list, are served unchanged
+(same-origin and non-browser callers are unaffected).
+
 Note the naming mismatch: the slicer calls the quality category `profiles()` in
 its interface, while the engine, the repository, and this API all call it
 **processes**. The API uses `processes` consistently; the adapter on the slicer
