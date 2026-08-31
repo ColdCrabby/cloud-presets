@@ -262,6 +262,11 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// filepath.Join cleans the path, so ".." segments cannot escape root.
 	file := filepath.Join(h.root, filepath.FromSlash(rel))
 	if info, err := os.Stat(file); err == nil && !info.IsDir() {
+		// HTML must revalidate or the browser heuristically caches it and keeps
+		// loading last build's hashed bundles; those hashed assets are immutable.
+		if strings.HasSuffix(file, ".html") {
+			w.Header().Set("Cache-Control", "no-cache")
+		}
 		http.ServeFile(w, r, file)
 		return
 	}
@@ -271,6 +276,9 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // serveIndex writes index.html, injecting configScript before </head> when set.
 func (h spaHandler) serveIndex(w http.ResponseWriter, r *http.Request) {
 	index := filepath.Join(h.root, "index.html")
+	// The SPA entry point must always revalidate so a new build's asset hashes
+	// are picked up without a hard refresh.
+	w.Header().Set("Cache-Control", "no-cache")
 	if h.configScript == "" {
 		http.ServeFile(w, r, index)
 		return

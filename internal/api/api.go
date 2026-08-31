@@ -91,6 +91,17 @@ func Register(api huma.API, holder *catalog.Holder) {
 
 // Config returns the Huma config used for both the server and the OpenAPI
 // export, so the generated document matches what the server serves.
+//
+// Huma auto-serves the spec and an interactive reference off this config, which
+// is the whole client-facing story for the API:
+//
+//	GET /v1/openapi.json      OpenAPI 3.1 (JSON)   — the Angular client generator's input
+//	GET /v1/openapi.yaml      OpenAPI 3.1 (YAML)
+//	GET /v1/openapi-3.0.json  OpenAPI 3.0 (JSON)   — downgrade for 3.0-only generators
+//	GET /v1/openapi-3.0.yaml  OpenAPI 3.0 (YAML)
+//	GET /v1/docs              Scalar API reference — browse + "Download OpenAPI Document"
+//
+// See docs/api-surface.md ("Client Generation").
 func Config() huma.Config {
 	cfg := huma.DefaultConfig("Cold Crabby Preset Cloud", "1.0.0")
 	cfg.OpenAPI.Info.Description = "In-memory, searchable catalog of 3D printer presets " +
@@ -103,5 +114,9 @@ func Config() huma.Config {
 	cfg.SchemasPath = BasePath + cfg.SchemasPath
 	cfg.OpenAPIPath = BasePath + cfg.OpenAPIPath
 	cfg.DocsPath = BasePath + cfg.DocsPath
+	// Scalar renders a friendlier reference than Huma's default (Stoplight
+	// Elements) and ships a one-click spec download, so /v1/docs doubles as the
+	// discovery point for anyone generating a client.
+	cfg.DocsRenderer = huma.DocsRendererScalar
 	return cfg
 }

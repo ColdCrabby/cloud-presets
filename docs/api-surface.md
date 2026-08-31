@@ -413,14 +413,31 @@ dry-run endpoint, so the editor can attach messages to individual inputs.
 
 ## Client Generation
 
-The build writes the OpenAPI 3.1 document to disk, and both Angular apps generate
-their client from that file. Neither app hand-writes request types.
+The API describes itself. Huma serves the spec and an interactive reference off
+the running server, under the same `/v1` mount as everything else:
 
-One caveat to design around: Huma emits **3.1**, and not every generator supports
-3.1 fully. If the chosen Angular generator cannot consume it, the options are a
-3.1-capable generator or a downgrade step in the build — Huma does not document a
-built-in 3.0 export. This is worth settling early, since it affects the build
-pipeline rather than any application code.
+| Path | What it is |
+| --- | --- |
+| `GET /v1/docs` | **Scalar API reference** — browse every endpoint, try calls, and download the spec |
+| `GET /v1/openapi.json` | OpenAPI **3.1** (JSON) — the Angular client generator's input |
+| `GET /v1/openapi.yaml` | OpenAPI 3.1 (YAML) |
+| `GET /v1/openapi-3.0.json` | OpenAPI **3.0** (JSON) — a downgrade for 3.0-only generators |
+| `GET /v1/openapi-3.0.yaml` | OpenAPI 3.0 (YAML) |
+
+The public app links to `/v1/docs` from its header ("API"), so the viewer and the
+spec download are discoverable without reading this document. The reference is
+same-origin, so it needs no CORS configuration and stays in step with the running
+build automatically.
+
+The build also writes the OpenAPI 3.1 document to disk (`go run ./cmd/openapi`),
+and both Angular apps generate their client from that file. Neither app
+hand-writes request types.
+
+Huma emits **3.1**, and not every generator supports 3.1 fully. That is why the
+server also serves the auto-downgraded **3.0** document above: a 3.0-only
+generator can consume `openapi-3.0.json` without a separate downgrade step in the
+build.
 
 The generated client is committed, so a spec change shows up as a reviewable diff
 in the frontends rather than as an invisible build-time difference.
+
