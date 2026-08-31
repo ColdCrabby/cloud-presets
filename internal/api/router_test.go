@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -83,5 +84,65 @@ func TestHealthRoutesThroughWrappedHandler(t *testing.T) {
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+}
+
+// TestOpenAPISpecIsServed verifies the machine-readable spec is reachable at the
+// mounted path, so the client generator (and anyone else) can fetch it.
+func TestOpenAPISpecIsServed(t *testing.T) {
+	_, handler := New(catalog.NewHolder(), nil)
+	srv := httptest.NewServer(handler)
+	defer srv.Close()
+
+	for _, path := range []string{
+		"/v1/openapi.json",     // OpenAPI 3.1 (the Angular generator's input)
+		"/v1/openapi-3.0.json", // downgrade for 3.0-only generators
+	} {
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		func() {
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("GET %s: status = %d, want 200", path, resp.StatusCode)
+			}
+			var doc map[string]any
+			if err := json.NewDecoder(resp.Body).Decode(&doc); err != nil {
+				t.Fatalf("GET %s: decode spec: %v", path, err)
+			}
+			if doc["openapi"] == nil {
+				t.Errorf("GET %s: spec missing the \"openapi\" version field", path)
+			}
+		}()
+	}
+}
+
+// TestDocsRendersScalarReference verifies /v1/docs serves the Scalar reference
+// page and points it at the mounted spec, so the viewer resolves same-origin.
+func TestDocsRendersScalarReference(t *testing.T) {
+	_, handler := New(catalog.NewHolder(), nil)
+	srv := httptest.NewServer(handler)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/v1/docs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(body)
+	if !strings.Contains(page, "@scalar/api-reference") {
+		t.Errorf("docs page is not the Scalar renderer:\n%s", page)
+	}
+	if !strings.Contains(page, "/v1/openapi.json") {
+		t.Errorf("docs page does not reference the mounted spec /v1/openapi.json")
 	}
 }
