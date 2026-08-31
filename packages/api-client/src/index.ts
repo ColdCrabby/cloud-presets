@@ -2,8 +2,8 @@
  * Public entry point for the generated Cloud Presets API client.
  *
  * Everything under `./generated` is produced by `pnpm gen:client` from
- * `openapi/openapi.json` and committed, so a spec change lands as a reviewable
- * diff. Do not edit generated files by hand.
+ * `openapi/openapi.gen.json` and committed, so a spec change lands as a
+ * reviewable diff. Do not edit generated files by hand.
  */
 export * from './generated';
 export { client as cloudPresetsClient } from './generated/client.gen';

@@ -85,6 +85,7 @@ func handleMe(w http.ResponseWriter, r *http.Request) {
 func Register(api huma.API, holder *catalog.Holder) {
 	registerHealth(api, holder)
 	registerPresets(api, holder)
+	registerPresetDetail(api, holder)
 	registerVendors(api, holder)
 }
 

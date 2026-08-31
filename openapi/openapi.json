@@ -73,15 +73,32 @@
         "operationId": "listVendors",
         "tags": ["public"],
         "summary": "List the vendor directory",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "description": "Maximum vendors to return (bounded server-side)."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Opaque continuation token from a previous page."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "All known vendors.",
+            "description": "A page of vendor directory entries.",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Vendor" } }
+                "schema": { "$ref": "#/components/schemas/VendorPage" }
               }
             }
-          }
+          },
+          "409": { "$ref": "#/components/responses/Problem" }
         }
       }
     },
@@ -215,6 +232,22 @@
           "website": { "type": ["string", "null"], "format": "uri" }
         },
         "required": ["slug", "display_name", "brands"]
+      },
+      "VendorPage": {
+        "type": "object",
+        "description": "A page of vendor directory entries plus the catalog revision it was served from.",
+        "properties": {
+          "vendors": { "type": "array", "items": { "$ref": "#/components/schemas/Vendor" } },
+          "next_cursor": {
+            "type": ["string", "null"],
+            "description": "Opaque continuation token; absent on the last page."
+          },
+          "revision": {
+            "type": "string",
+            "description": "Catalog revision the page was served from."
+          }
+        },
+        "required": ["vendors"]
       },
       "Health": {
         "type": "object",

@@ -161,6 +161,25 @@ export type HealthResponseBody = {
   status: string;
 };
 
+export type ListVendorsResponseBody = {
+  /**
+   * A URL to the JSON Schema for this object.
+   */
+  readonly $schema?: string;
+  /**
+   * Continuation token; absent on the last page.
+   */
+  next_cursor?: string;
+  /**
+   * Catalog revision the page was served from.
+   */
+  revision: string;
+  /**
+   * The page of vendor directory entries.
+   */
+  vendors: Array<Vendor> | null;
+};
+
 export type MatchInfo = {
   /**
    * Name of the field the query matched.
@@ -170,6 +189,43 @@ export type MatchInfo = {
    * Offsets within the field value that matched.
    */
   ranges: Array<[number, number] | null> | null;
+};
+
+export type PresetResponseBody = {
+  /**
+   * A URL to the JSON Schema for this object.
+   */
+  readonly $schema?: string;
+  /**
+   * Stable identifier of the preset.
+   */
+  id: string;
+  /**
+   * Canonical URL of this preset, for re-import into the slicer.
+   */
+  import_url: string;
+  /**
+   * Human-readable preset name.
+   */
+  name: string;
+  /**
+   * The preset's slicing parameters in the slicer's own field names and units.
+   */
+  params: {
+    [key: string]: unknown;
+  };
+  /**
+   * Where the preset came from; always "catalog" when served here.
+   */
+  source: 'catalog';
+  /**
+   * Kind of profile the preset describes.
+   */
+  type: 'printer' | 'filament' | 'process';
+  /**
+   * Vendor slug the preset belongs to.
+   */
+  vendor: string;
 };
 
 export type PresetSummary = {
@@ -359,6 +415,54 @@ export type HealthResponseBodyWritable = {
   status: string;
 };
 
+export type ListVendorsResponseBodyWritable = {
+  /**
+   * Continuation token; absent on the last page.
+   */
+  next_cursor?: string;
+  /**
+   * Catalog revision the page was served from.
+   */
+  revision: string;
+  /**
+   * The page of vendor directory entries.
+   */
+  vendors: Array<Vendor> | null;
+};
+
+export type PresetResponseBodyWritable = {
+  /**
+   * Stable identifier of the preset.
+   */
+  id: string;
+  /**
+   * Canonical URL of this preset, for re-import into the slicer.
+   */
+  import_url: string;
+  /**
+   * Human-readable preset name.
+   */
+  name: string;
+  /**
+   * The preset's slicing parameters in the slicer's own field names and units.
+   */
+  params: {
+    [key: string]: unknown;
+  };
+  /**
+   * Where the preset came from; always "catalog" when served here.
+   */
+  source: 'catalog';
+  /**
+   * Kind of profile the preset describes.
+   */
+  type: 'printer' | 'filament' | 'process';
+  /**
+   * Vendor slug the preset belongs to.
+   */
+  vendor: string;
+};
+
 export type SearchResponseBodyWritable = {
   /**
    * Continuation token; absent on the last page.
@@ -480,6 +584,48 @@ export type SearchPresetsResponses = {
 
 export type SearchPresetsResponse = SearchPresetsResponses[keyof SearchPresetsResponses];
 
+export type GetPresetData = {
+  body?: never;
+  path: {
+    /**
+     * Stable identifier of the preset to fetch.
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/v1/presets/{id}';
+};
+
+export type GetPresetErrors = {
+  /**
+   * Not Found
+   */
+  404: ErrorModel;
+  /**
+   * Unprocessable Entity
+   */
+  422: ErrorModel;
+  /**
+   * Internal Server Error
+   */
+  500: ErrorModel;
+  /**
+   * Service Unavailable
+   */
+  503: ErrorModel;
+};
+
+export type GetPresetError = GetPresetErrors[keyof GetPresetErrors];
+
+export type GetPresetResponses = {
+  /**
+   * OK
+   */
+  200: PresetResponseBody;
+};
+
+export type GetPresetResponse = GetPresetResponses[keyof GetPresetResponses];
+
 export type UploadPresetsData = {
   body?: {
     files: Array<Blob | File>;
@@ -575,15 +721,36 @@ export type ClaimUploadResponse = ClaimUploadResponses[keyof ClaimUploadResponse
 export type ListVendorsData = {
   body?: never;
   path?: never;
-  query?: never;
+  query?: {
+    /**
+     * Maximum vendors to return (bounded server-side).
+     */
+    limit?: number;
+    /**
+     * Opaque continuation token from a previous page.
+     */
+    cursor?: string;
+  };
   url: '/v1/vendors';
 };
 
 export type ListVendorsErrors = {
   /**
-   * Error
+   * Conflict
    */
-  default: ErrorModel;
+  409: ErrorModel;
+  /**
+   * Unprocessable Entity
+   */
+  422: ErrorModel;
+  /**
+   * Internal Server Error
+   */
+  500: ErrorModel;
+  /**
+   * Service Unavailable
+   */
+  503: ErrorModel;
 };
 
 export type ListVendorsError = ListVendorsErrors[keyof ListVendorsErrors];
@@ -592,7 +759,7 @@ export type ListVendorsResponses = {
   /**
    * OK
    */
-  200: Array<Vendor> | null;
+  200: ListVendorsResponseBody;
 };
 
 export type ListVendorsResponse = ListVendorsResponses[keyof ListVendorsResponses];
