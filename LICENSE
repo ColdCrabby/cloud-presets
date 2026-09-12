@@ -1,0 +1,151 @@
+# ColdCrabby Catalog — Terms of Use
+
+Copyright © 2026 Max Scopp.
+
+The ColdCrabby Catalog is a community service for discovering, sharing, and maintaining printer and material presets.
+
+## 1. Purpose
+
+The ColdCrabby Catalog allows users, manufacturers, vendors, and community contributors to publish and consume preset data for use with compatible software.
+
+The Catalog is intended to provide a clean, reliable, and community-oriented source of printer and material configuration data.
+
+## 2. Using the Catalog
+
+Anyone may browse and download publicly available Catalog content for personal, educational, research, development, and commercial purposes, subject to the license attached to the individual content.
+
+Using a preset from the Catalog does not require a separate ColdCrabby Catalog license.
+
+Commercial users may use publicly available presets in their own commercial workflows where the applicable preset license permits such use.
+
+## 3. Preset Ownership
+
+Contributors retain ownership of the preset data and other content they submit.
+
+Submitting content to the Catalog does not transfer ownership to ColdCrabby or Max Scopp.
+
+Each contributor is responsible for ensuring that they have the necessary rights to submit the content.
+
+## 4. Content Licenses
+
+When publishing content, contributors may be required to specify the license or permitted usage terms for that content.
+
+Those terms apply to users of the content.
+
+The Catalog does not grant users rights that the applicable content license does not grant.
+
+Where a vendor provides an official preset, the vendor may retain ownership and specify appropriate terms for that preset.
+
+## 5. Official Vendor Presets
+
+Manufacturers and vendors may publish official presets for their products.
+
+Official presets may identify:
+
+- the manufacturer or vendor;
+- the applicable product;
+- supported materials;
+- recommended settings;
+- preset versions;
+- release notes;
+- other relevant information.
+
+The publisher remains responsible for the accuracy and legitimacy of its official presets.
+
+ColdCrabby does not guarantee that a preset is suitable for a particular machine, material, environment, or use case.
+
+## 6. Free Vendor Publishing
+
+The first official preset publication by a vendor is free.
+
+ColdCrabby may also provide a free tier for vendors with a limited number of publicly available presets.
+
+The purpose of the free tier is to keep the Catalog broadly accessible and encourage manufacturers and vendors to provide official presets to the community.
+
+ColdCrabby may introduce additional paid services for vendors without charging users simply to access the public Catalog.
+
+## 7. Paid Vendor Services
+
+ColdCrabby may offer optional paid services to vendors, including:
+
+- larger preset catalogs;
+- advanced vendor management;
+- team features;
+- analytics;
+- API access;
+- private or pre-release presets;
+- enhanced distribution features;
+- featured placement;
+- other professional services.
+
+Paid services do not give a vendor ownership of the Catalog or preferential rights over the community as a whole unless expressly agreed.
+
+## 8. Community Contributions
+
+Community members may contribute presets and other content where supported by the Catalog.
+
+Contributors must not knowingly submit:
+
+- content they do not have the right to distribute;
+- malicious code;
+- intentionally misleading configurations;
+- impersonation of manufacturers or vendors;
+- content intended to damage equipment or cause unsafe operation.
+
+ColdCrabby may review, reject, modify metadata for, disable, or remove content that violates these terms or materially harms the quality or reliability of the Catalog.
+
+## 9. Vendor Identity
+
+Only the applicable rights holder or an authorized representative may identify a preset as an official vendor preset.
+
+ColdCrabby may require verification before granting official vendor status.
+
+## 10. Quality and Moderation
+
+ColdCrabby may moderate the Catalog to maintain its quality, consistency, and professional character.
+
+Moderation may include:
+
+- rejecting submissions;
+- removing duplicate content;
+- correcting metadata;
+- disabling obsolete presets;
+- removing misleading or abusive content;
+- suspending accounts;
+- removing content that violates applicable law or these terms.
+
+Moderation does not transfer ownership of the affected content to ColdCrabby.
+
+## 11. Catalog Availability
+
+The Catalog is provided as a service and may change, become temporarily unavailable, or be discontinued.
+
+ColdCrabby does not guarantee permanent availability of any particular preset, version, API, or feature.
+
+## 12. No Warranty
+
+Preset data and Catalog services are provided "as is".
+
+ColdCrabby does not guarantee that presets are correct, safe, compatible, or suitable for any particular printer, material, hardware configuration, or purpose.
+
+Users are responsible for validating settings before use.
+
+## 13. Trademarks
+
+Vendor names, product names, logos, and trademarks remain the property of their respective owners.
+
+Publication of a vendor's preset does not grant ColdCrabby ownership of the vendor's trademarks.
+
+ColdCrabby may display vendor names, logos, and product information where reasonably necessary to identify and present official presets.
+
+## 14. Changes
+
+These terms may be updated as the Catalog evolves.
+
+The terms applicable to previously published content remain subject to the content license selected by its contributor unless otherwise required by law.
+
+## 15. Contact
+
+For questions regarding the Catalog or vendor publishing:
+
+[slicer-catalog@maxscopp.de](mailto:slicer-catalog@maxscopp.de)

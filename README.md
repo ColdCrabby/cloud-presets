@@ -125,5 +125,4 @@ introducing a second house style.
 
 ## License
 
-See [`ColdCrabby/slicer`](https://github.com/ColdCrabby/slicer) for project-wide
-licensing.
+See [`LICENSE`](LICENSE) for licensing.
